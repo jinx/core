@@ -527,7 +527,7 @@ module Jinx
     def printable_content(attributes=nil, &reference_printer)
       attributes ||= printworthy_attributes
       vh = value_hash(attributes)
-      vh.transform { |value| printable_value(value, &reference_printer) }
+      vh.transform_value { |value| printable_value(value, &reference_printer) }
     end
 
     # Returns whether value equals other modulo the given matches according to the following tests:

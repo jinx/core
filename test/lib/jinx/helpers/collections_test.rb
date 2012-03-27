@@ -315,7 +315,7 @@ class CollectionsTest < Test::Unit::TestCase
 
   def test_transformed_hash
     hash = {:a => 1, :b => 2}
-    xfm = hash.transform { |value| value * 2 }
+    xfm = hash.transform_value { |value| value * 2 }
     assert_equal(2, xfm[:a], 'Transformed hash accessor incorrect')
     assert_equal([2, 4], xfm.values.sort, 'Transformed hash values incorrect')
     assert(xfm.has_value?(4), 'Transformed hash value query incorrect')

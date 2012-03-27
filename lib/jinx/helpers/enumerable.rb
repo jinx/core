@@ -190,7 +190,7 @@ module Enumerable
   alias :& :intersect
 
   # Returns a new Enumerable that iterates over the base Enumerable applying the transformer block to each item, e.g.:
-  #   [1, 2, 3].transform { |n| n * 2 }.to_a #=> [2, 4, 6]
+  #   [1, 2, 3].transform_value { |n| n * 2 }.to_a #=> [2, 4, 6]
   #
   # Unlike Array.map, {#wrap} reflects changes to the base Enumerable, e.g.:
   #   a = [2, 4, 6]
