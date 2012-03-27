@@ -4,7 +4,7 @@ JINX: JRuby Java introspector
 **Home**:         [http://github.com/jinx/core](http://github.com/jinx/core)    
 **Git**:          [http://github.com/jinx/core](http://github.com/jinx/core)       
 **Author**:       OHSU Knight Cancer Institute    
-**Copyright**:    2011    
+**Copyright**:    2012    
 **License**:      MIT License    
 
 Synopsis
@@ -40,5 +40,5 @@ See the [example](http://github.com/jinx/core/tree/master/examples/family) for a
 Copyright
 ---------
 
-Jinx &copy; 2011 by [Oregon Health & Science University](http://www.ohsu.edu/xd/health/services/cancer/index.cfm).
+Jinx &copy; 2012 by [Oregon Health & Science University](http://www.ohsu.edu/xd/health/services/cancer/index.cfm).
 Jinx is licensed under the MIT license. Please see the LICENSE and LEGAL files for more information.
