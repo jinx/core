@@ -25,7 +25,7 @@ module Jinx
 
     # @yield [key] the detector block
     # @yieldparam key the hash key
-    # @return [Object, nil] the key for which the detector block returns a non-nil, non-false value,
+    # @return the key for which the detector block returns a non-nil, non-false value,
     #   or nil if none
     # @example
     #   {1 => :a, 2 => :b, 3 => :c}.detect_key { |k| k > 1 } #=> 2
@@ -36,7 +36,7 @@ module Jinx
 
     # @yield [value] the detector block
     # @yieldparam value the hash value
-    # @return [Object, nil] the key for which the detector block returns a non-nil, non-false value,
+    # @return the key for which the detector block returns a non-nil, non-false value,
     #   or nil if none
     # @example
     #   {:a => 1, :b => 2, :c => 3}.detect_key_with_value { |v| v > 1 } #=> :b
@@ -295,12 +295,25 @@ module Jinx
     end
 
     # @example
-    #   {:a => 1, :b => 2}.transform { |n| n * 2 }.values #=> [2, 4]
+    #   {:a => 1, :b => 2}.transform_value { |n| n * 2 }.values #=> [2, 4] 
+    #                                           
+    # @yield [value] transforms the given value
+    # @yieldparam [value] the value to transform 
     # @return [Hash] a new Hash that transforms each value
-    def transform(&transformer)
+    def transform_value(&transformer)
       ValueTransformerHash.new(self, &transformer)
     end
 
+    # @example
+    #   {1 => :a, 2 => :b}.transform_key { |n| n * 2 }.keys #=> [2, 4]
+    #                                           
+    # @yield [key] transforms the given key
+    # @yieldparam [value] the key to transform 
+    # @return [Hash] a new Hash that transforms each key
+    def transform_key(&transformer)
+      KeyTransformerHash.new(self, &transformer)
+    end
+    
     # @return [Hash] a new Hash created from this Hashable's content
     def to_hash
       hash = {}
@@ -417,15 +430,48 @@ module Jinx
       @base = base
       @xfm = transformer
     end
-
-    # Returns the value at key after this ValueTransformerHash's transformer block is applied, or nil
-    # if this hash does not contain key.
+                                         
+    # @param key the hash key
+    # @return the value at key after this ValueTransformerHash's transformer block is applied, or nil
+    #   if this hash does not contain key
     def [](key)
       @xfm.call(@base[key]) if @base.has_key?(key)
     end
-
+    
+    # @yield [key, value] operate on the key and transformed value
+    # @yieldparam key the hash key
+    # @yieldparam value the transformed hash value
     def each
       @base.each { |key, value| yield(key, @xfm.call(value)) }
+    end
+  end
+  
+  # The KeyTransformerHash class pipes the key from a base Hashable into a transformer block.
+  # @private
+  class KeyTransformerHash
+    include Hashable
+
+    # Creates a KeyTransformerHash on the base hash and key transformer block.
+    #
+    # @param [Hash, nil] base the hash to transform
+    # @yield [key] transforms the base key
+    # @yieldparam key the base key to transform
+    def initialize(base, &transformer)
+      @base = base
+      @xfm = transformer
+    end
+
+    # @param key the untransformed hash key
+    # @return the value for the transformed key
+    def [](key)
+      @base[@xfm.call(@base[key])]
+    end
+
+    # @yield [key, value] operate on the transformed key and value
+    # @yieldparam key the transformed hash key
+    # @yieldparam value the hash value
+    def each
+      @base.each { |key, value| yield(@xfm.call(key), value) }
     end
   end
   
