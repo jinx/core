@@ -4,7 +4,7 @@ JINX: JRuby Java introspector
 **Home**:         [http://github.com/jinx/core](http://github.com/jinx/core)    
 **Git**:          [http://github.com/jinx/core](http://github.com/jinx/core)       
 **Author**:       OHSU Knight Cancer Institute    
-**Copyright**:    2011    
+**Copyright**:    2012    
 **License**:      MIT License    
 
 Synopsis
