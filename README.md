@@ -40,5 +40,5 @@ See the [example](http://github.com/jinx/core/tree/master/examples/family) for a
 Copyright
 ---------
 
-Jinx &copy; 2011 by [Oregon Health & Science University](http://www.ohsu.edu/xd/health/services/cancer/index.cfm).
+Jinx &copy; 2012 by [Oregon Health & Science University](http://www.ohsu.edu/xd/health/services/cancer/index.cfm).
 Jinx is licensed under the MIT license. Please see the LICENSE and LEGAL files for more information.
