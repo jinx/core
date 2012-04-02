@@ -2,7 +2,7 @@ require 'jinx/helpers/class'
 
 class Array
   # The EMPTY_ARRAY constant is an immutable empty array, used primarily as a default argument.
-  class << EMPTY_ARRAY = Array.new
+  class << EMPTY_ARRAY ||= Array.new
     def <<(value)
       Jinx.fail(NotImplementedError, "Modification of the constant empty array is not supported")
     end
