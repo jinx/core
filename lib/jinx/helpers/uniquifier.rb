@@ -1,4 +1,5 @@
 require 'singleton'
+require 'jinx/helpers/lazy_hash'
 
 module Jinx
   # A utility class to generate value qualifiers.
