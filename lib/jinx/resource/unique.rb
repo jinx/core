@@ -1,6 +1,4 @@
-require 'singleton'
 require 'jinx/helpers/uniquifier'
-require 'jinx/helpers/collection'
 
 module Jinx
   # The Unique mix-in makes values unique within the scope of a Resource class.
