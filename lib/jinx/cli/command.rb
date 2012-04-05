@@ -46,11 +46,10 @@ module Jinx
       # * +--verbose+ : print additional information to the console
       # * +--log FILE+ : log file
       # * +--debug+ : print debug messages to the log
-      # * +--file FILE+: configuration file containing other options
+      # * +--file FILE+: file containing other options
       # * +--quiet+: suppress printing messages to stdout
       #
-      # This class processes these built-in options, with the exception of +--version+,
-      # which is a subclass responsibility. Subclasses are responsible for
+      # This class processes these built-in options. Subclasses are responsible for
       # processing any remaining options.
       #
       # @param [<(Symbol, String, String, Class, String), (Symbol, String)>, nil] specs
@@ -180,7 +179,9 @@ module Jinx
         opts
       end
       
-      # Processes the built-in options.
+      # Processes the built-in options as follows:
+      # * +:help+ - print the usage message and exit
+      # * +:file+ FILE - load the options specified in the given file
       #
       # @param [{Symbol => Object}] the option => value hash
       def handle_options(opts)
@@ -189,8 +190,8 @@ module Jinx
         # If there is a file option, then load additional options from the file.
         file = opts.delete(:file)
         if file then
-          props = Jinx::Properties.new(file)
-          props.each { |opt, arg| ARGV << "--#{opt}" << arg }
+          fopts = File.open(file).map { |line| line.chomp }.split(' ').flatten
+          ARGV.concat(fopts)
           OptionParser.new do |p|
             opts.merge!(parse(p)) { |ov, nv| ov ? ov : nv }
           end

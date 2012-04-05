@@ -24,7 +24,9 @@ module Jinx
           status = run(*args, &block)
         rescue
           log(FATAL, "#{@appname} detected an exception: #{$!}\n#{$@.qp}")
-          $stderr.puts "#{@appname} was unsuccessful: #{$!}.\nSee the log #{Log.instance.file} for more information."
+          msg = "#{@appname} was unsuccessful: #{$!}."
+          msg += "\nSee the log #{Log.instance.file} for more information." if Log.instance.file
+          $stderr.puts msg
         ensure
           log(INFO, "#{@appname} completed with status #{status}.")
         end

@@ -33,6 +33,10 @@ module Jinx
       each_key { |key| return key if yield key }
       nil
     end
+    
+    def has_key?(key)
+      !!detect_key { |k| k == key }
+    end
 
     # @yield [value] the detector block
     # @yieldparam value the hash value
@@ -49,7 +53,7 @@ module Jinx
     def each_value
       each { |key, value| yield value }
     end
-
+    
     # Returns a Hashable which composes each value in this Hashable with the key of
     # the other Hashable, e.g.:
     #   x = {:a => :c, :b => :d}
