@@ -1,4 +1,4 @@
-require 'rake'
+require 'fileutils'
 require File.dirname(__FILE__) + '/lib/jinx/version'
 
 # the gem name
@@ -8,8 +8,8 @@ GEM_VERSION = Jinx::VERSION
 WINDOWS = (Config::CONFIG['host_os'] =~ /mingw|win32|cygwin/ ? true : false) rescue false
 SUDO = WINDOWS ? '' : 'sudo'
 
-desc 'Default: run the specs'
-task :default => :spec
+desc 'Default: run the tests'
+task :default => :test
 
 desc 'Builds the gem'
 task :gem do
@@ -19,6 +19,12 @@ end
 desc 'Installs the gem'
 task :install => :gem do
   sh "#{SUDO} jgem install #{GEM}-#{GEM_VERSION}.gem"
+end
+
+desc 'Documents the API'
+task :doc do
+  FileUtils.rm_rf 'doc/api'
+  sh 'yardoc'
 end
 
 desc 'Runs the spec tests'

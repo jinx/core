@@ -4,9 +4,9 @@ require 'jinx/helpers/boolean'
 
 class BooleanTest < Test::Unit::TestCase
   def test_marker
-    assert(Boolean === true, "true is not a Boolean")
-    assert(Boolean === false, "false is not a Boolean")
-    assert(!nil.is_a?(Boolean), "nil is a Boolean")
+    assert(Jinx::Boolean === true, "true is not a Jinx::Boolean")
+    assert(Jinx::Boolean === false, "false is not a Jinx::Boolean")
+    assert(!nil.is_a?(Jinx::Boolean), "nil is a Jinx::Boolean")
   end
   
   def test_string
@@ -16,7 +16,7 @@ class BooleanTest < Test::Unit::TestCase
     ['false', 'False', 'f', 'F', 'no', 'No', 'n', 'N', '0'].each do |s|
       assert_equal(false, Jinx::Boolean.for(s), "#{s} is not converted to false")
     end
-    assert_raises(ArgumentError, "Invalid boolean string was converted") { 'Maybe'.to_boolean }
+    assert_raises(ArgumentError, "Invalid boolean string was converted") { Jinx::Boolean.for('Maybe') }
   end
   
   def test_integer

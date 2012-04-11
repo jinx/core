@@ -626,7 +626,7 @@ module Jinx
     # Subclasses override this method for additional validation, but should call super first.
     #
     # @see #validate_mandatory_attributes
-    # @ee #validate_owner
+    # @see #validate_owner
     def validate_local
       validate_mandatory_attributes
       validate_owner

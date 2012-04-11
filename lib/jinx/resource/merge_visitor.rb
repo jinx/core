@@ -29,11 +29,6 @@ module Jinx
     #
     # If a block is given to this method, then the block is called on each matched (source, target) pair.
     #
-    # @alert caCORE caCORE does not enforce reference identity integrity, i.e. a search on object _a_
-    # with database record references _a_ => _b_ => _a_, the search result might be _a_ => _b_ => _a'_,
-    # where _a.identifier_ == _a'.identifier_. This visit method remedies the caCORE defect by matching
-    # source references on a previously matched identifier where possible.
-    #
     # @param [Resource] source the domain object to merge from
     # @param [Resource] target the domain object to merge into 
     # @yield [target, source] the optional block to call on the visited source domain object and its

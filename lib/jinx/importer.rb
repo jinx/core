@@ -9,14 +9,11 @@ module Jinx
   # the class name in the context of the module.
   # The imported class {Metadata} is introspected.
   #
-  # @example
-  #   
   # Import on demand is induced by a reference to the class.
-  # The +clincal_trials+ example illustrates a domain package extended
-  # with metadata capability. The first reference by name to +ClinicalTrials::Subject+
-  # imports the Java class +clincal_trials.domain.Subject+ into the JRuby class wrapper
-  # +ClinicalTrials::Subject+. The +ClinicalTrials::Resource+ module is included
-  # in +ClinicalTrials::Subject+ and the Java attribute meta-data is introspected.
+  # The +family+ example illustrates a domain package extended
+  # with metadata capability. The first non-definition reference to +Family::Parent+
+  # imports the Java class +family.Parent+ into the JRuby class wrapper
+  # +Family+ and introspects the Java property meta-data.
   module Importer
     # Declares that the given {Resource} classes will be dynamically modified.
     # This method introspects the classes, if necessary.

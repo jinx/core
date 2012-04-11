@@ -4,7 +4,7 @@ require 'ftools'
 require 'jinx/helpers/collections'
 require 'jinx/helpers/options'
 
-# @return (see Jinx.logger)
+# @return [Jinx::MultilineLogger] the global logger
 def logger
   Jinx.logger
 end
