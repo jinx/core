@@ -1,4 +1,4 @@
-module CaRuby
+module Jinx
   # A PartialOrder is a Comparable which restricted scope. Classes which include PartialOrder
   # are required to implement the <=> operator with the following semantics:
   # *  _a_ <=> _b_ returns -1, 0, or 1 if a and b are comparable, nil otherwise

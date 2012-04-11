@@ -147,28 +147,28 @@ class CollectionsTest < Test::Unit::TestCase
     a = {:a => 1, :b => 2}
     b = {:b => 3, :c => 4}
     ab = a + b
-    assert_equal({:a => 1, :b => 2, :c => 4}, ab.keys.to_compact_hash { |key| ab[key] }, "Hash union incorrect")
+    assert_equal({:a => 1, :b => 2, :c => 4}, ab.keys.to_compact_hash { |k| ab[k] }, "Hash union incorrect")
     assert_equal([1, 2, 4], ab.values.sort, "Hash union values incorrect")
     a.delete(:b)
-    assert_equal({:a => 1, :b => 3, :c => 4}, ab.keys.to_compact_hash { |key| ab[key] }, "Hash union does not reflect underlying change")
+    assert_equal({:a => 1, :b => 3, :c => 4}, ab.keys.to_compact_hash { |k| ab[k] }, "Hash union does not reflect underlying change")
   end
 
   def test_hash_compose
     x = {:a => :c, :b => :d}
     y = {:c => 1}
     xy = x.compose(y)
-    assert_equal({:a => {:c => 1}}, xy.keys.to_compact_hash { |key| xy[key] }, "Composed hash incorrect")
+    assert_equal({:a => {:c => 1}}, xy.keys.to_compact_hash { |k| xy[k] }, "Composed hash incorrect")
     y[:d] = 2
-    assert_equal({:a => {:c => 1}, :b => {:d => 2}}, xy.keys.to_compact_hash { |key| xy[key] }, "Composed hash does not reflect underlying change")
+    assert_equal({:a => {:c => 1}, :b => {:d => 2}}, xy.keys.to_compact_hash { |k| xy[k] }, "Composed hash does not reflect underlying change")
   end
 
   def test_hash_join
     x = {:a => :c, :b => :d}
     y = {:c => 1}
     xy = x.join(y)
-    assert_equal({:a => 1}, xy.keys.to_compact_hash { |key| xy[key] }, "Joined hash incorrect")
+    assert_equal({:a => 1}, xy.keys.to_compact_hash { |k| xy[k] }, "Joined hash incorrect")
     y[:d] = 2
-    assert_equal({:a => 1, :b => 2}, xy.keys.to_compact_hash { |key| xy[key] }, "Joined hash does not reflect underlying change")
+    assert_equal({:a => 1, :b => 2}, xy.keys.to_compact_hash { |k| xy[k] }, "Joined hash does not reflect underlying change")
   end
   
   def test_hash_diff
@@ -200,7 +200,7 @@ class CollectionsTest < Test::Unit::TestCase
   end
 
   def test_hash_enum_keys_with_value_block
-    assert_equal([:b, :c], {:a => 1, :b => 2, :c => 3}.enum_keys_with_value { |value| value > 1 }.to_a, "Hash filtered value block keys incorrect")
+    assert_equal([:b, :c], {:a => 1, :b => 2, :c => 3}.enum_keys_with_value { |v| v > 1 }.to_a, "Hash filtered value block keys incorrect")
   end
 
   def test_hash_enum_values
@@ -306,7 +306,7 @@ class CollectionsTest < Test::Unit::TestCase
   end
 
   def test_key_transformer_hash
-    hash = Jinx::KeyTransformerHash.new { |key| key % 2 }
+    hash = Jinx::KeyTransformerHash.new { |k| k % 2 }
     hash[1] = :a
     assert_equal(:a, hash[1], 'Key transformer hash entered value not found')
     assert_nil(hash[2], 'Transformed hash unentered value found')
@@ -315,7 +315,7 @@ class CollectionsTest < Test::Unit::TestCase
 
   def test_transformed_hash
     hash = {:a => 1, :b => 2}
-    xfm = hash.transform_value { |value| value * 2 }
+    xfm = hash.transform_value { |v| v * 2 }
     assert_equal(2, xfm[:a], 'Transformed hash accessor incorrect')
     assert_equal([2, 4], xfm.values.sort, 'Transformed hash values incorrect')
     assert(xfm.has_value?(4), 'Transformed hash value query incorrect')

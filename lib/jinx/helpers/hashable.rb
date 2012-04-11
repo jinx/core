@@ -20,7 +20,7 @@ module Jinx
 
     # @see Hash#each_key
     def each_key
-      each { |key, value| yield key }
+      each { |k, v| yield k }
     end
 
     # @yield [key] the detector block
@@ -30,7 +30,7 @@ module Jinx
     # @example
     #   {1 => :a, 2 => :b, 3 => :c}.detect_key { |k| k > 1 } #=> 2
     def detect_key
-      each_key { |key| return key if yield key }
+      each_key { |k| return k if yield k }
       nil
     end
     
@@ -45,13 +45,13 @@ module Jinx
     # @example
     #   {:a => 1, :b => 2, :c => 3}.detect_key_with_value { |v| v > 1 } #=> :b
     def detect_key_with_value
-      each { |key, value| return key if yield value }
+      each { |k, v| return k if yield v }
       nil
     end
 
     # @see Hash#each_value
     def each_value
-      each { |key, value| yield value }
+      each { |k, v| yield v }
     end
     
     # Returns a Hashable which composes each value in this Hashable with the key of
@@ -71,7 +71,7 @@ module Jinx
     # @param [Hashable] other the Hashable to compose with this Hashable
     # @return [Hashable] the composed result
     def compose(other)
-      transform { |value| {value => other[value]} if other.has_key?(value) }
+      transform_value { |v| {v => other[v]} if other.has_key?(v) }
     end
 
     # Returns a Hashable which joins each value in this Hashable with the key of
@@ -91,7 +91,7 @@ module Jinx
     # @param [Hashable] other the Hashable to join with this Hashable
     # @return [Hashable] the joined result
     def join(other)
-      transform { |value| other[value] }
+      transform_value { |v| other[v] }
     end
 
     # Returns a Hashable which associates each key of both this Hashable and the other Hashable
@@ -145,12 +145,12 @@ module Jinx
     # @yieldparam value the hash value to filter
     # @return [Hashable] the filtered result
     def filter_on_value
-      filter { |key, value| yield value }
+      filter { |k, v| yield v }
     end
 
     # @return [Hash] a {#filter} of this Hashable which excludes the entries with a null value
     def compact
-      filter_on_value { |value| not value.nil? }
+      filter_on_value { |v| not v.nil? }
     end
 
     # Returns the difference between this Hashable and the other Hashable in a Hash of the form:
@@ -169,10 +169,10 @@ module Jinx
     # @yieldparam v2 the value for key from the other Hashable
     # @return [{Object => (Object,Object)}] a hash of the differences
     def diff(other)
-      (keys.to_set + other.keys).to_compact_hash do |key|
-         mine = self[key]
-         yours = other[key]
-         [mine, yours] unless block_given? ? yield(key, mine, yours) : mine == yours
+      (keys.to_set + other.keys).to_compact_hash do |k|
+         mine = self[k]
+         yours = other[k]
+         [mine, yours] unless block_given? ? yield(k, mine, yours) : mine == yours
       end
     end
 
@@ -193,8 +193,8 @@ module Jinx
     def assoc_values(*others)
       all_keys = keys
       others.each { |hash| all_keys.concat(hash.keys) }
-      all_keys.to_compact_hash do |key|
-        others.map { |other| other[key] }.unshift(self[key])
+      all_keys.to_compact_hash do |k|
+        others.map { |other| other[k] }.unshift(self[k])
       end
     end
 
@@ -205,7 +205,7 @@ module Jinx
     # @yield [value] the filter block
     # @return [Enumerable] the filtered keys
     def enum_keys_with_value(target_value=nil, &filter) # :yields: value
-      return enum_keys_with_value { |value| value == target_value } if target_value
+      return enum_keys_with_value { |v| v == target_value } if target_value
       filter_on_value(&filter).keys
     end
 
@@ -278,7 +278,7 @@ module Jinx
     # @return [(Hash, Hash)] two hashes split by whether calling the block on the
     #   entry returns a non-nil, non-false value
     # @example
-    #   {:a => 1, :b => 2}.split { |key, value| value < 2 } #=> [{:a => 1}, {:b => 2}]
+    #   {:a => 1, :b => 2}.split { |k, v| v < 2 } #=> [{:a => 1}, {:b => 2}]
     def split(&block)
       partition(&block).map { |pairs| pairs.to_assoc_hash }
     end
@@ -291,9 +291,9 @@ module Jinx
     # @return [Hash] a deep copy of this Hashable 
     def copy_recursive
       copy = Hash.new
-      keys.each do |key|
-        value = self[key]
-        copy[key] = Hash === value ? value.copy_recursive : value
+      keys.each do |k|
+        value = self[k]
+        copy[k] = Hash === value ? value.copy_recursive : value
       end
       copy
     end
@@ -411,8 +411,8 @@ module Jinx
 
       def each
         @components.each_with_index do |hash, index|
-          hash.each do |key, value|
-             yield(key, value) unless (0...index).any? { |i| @components[i].has_key?(key) }
+          hash.each do |k, v|
+             yield(k, v) unless (0...index).any? { |i| @components[i].has_key?(k) }
           end
         end
         self
@@ -446,7 +446,7 @@ module Jinx
     # @yieldparam key the hash key
     # @yieldparam value the transformed hash value
     def each
-      @base.each { |key, value| yield(key, @xfm.call(value)) }
+      @base.each { |k, v| yield(k, @xfm.call(v)) }
     end
   end
   
@@ -475,7 +475,7 @@ module Jinx
     # @yieldparam key the transformed hash key
     # @yieldparam value the hash value
     def each
-      @base.each { |key, value| yield(@xfm.call(key), value) }
+      @base.each { |k, v| yield(@xfm.call(k), v) }
     end
   end
   

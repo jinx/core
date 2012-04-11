@@ -15,7 +15,7 @@ Gem::Specification.new do |s|
   s.test_files    = `git ls-files test`.split("\n")
   s.add_runtime_dependency     'bundler'
   s.add_development_dependency 'rake'
-  s.add_development_dependency 'rspec', '~> 2.8.0'
+  s.add_development_dependency 'rspec', '>= 2.6'
   s.has_rdoc      = 'yard'
   s.license       = 'MIT'
   s.rubyforge_project = 'caruby'

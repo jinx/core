@@ -13,7 +13,7 @@ public class Child extends DomainObject implements Person
     /**
      * A boolean property.
      */
-    private Boolean flag;
+    private Jinx::Boolean flag;
 
     /**
      * An integer property.
@@ -81,7 +81,7 @@ public class Child extends DomainObject implements Person
     /**
      * @return the flag
      */
-    public Boolean getFlag()
+    public Jinx::Boolean getFlag()
     {
         return flag;
     }
@@ -89,7 +89,7 @@ public class Child extends DomainObject implements Person
     /**
      * @param flag the flag to set
      */
-    public void setFlag(Boolean flag)
+    public void setFlag(Jinx::Boolean flag)
     {
         this.flag = flag;
     }

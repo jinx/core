@@ -1,9 +1,9 @@
 require File.dirname(__FILE__) + '/../../helper'
 require 'test/unit'
-require 'caruby/cli/command'
+require 'jinx/cli/command'
 require 'set'
 
-module CaRuby
+module Jinx
   class CommandTest < Test::Unit::TestCase
     def test_empty
       verify_execution(CLI::Command.new, '', {})
