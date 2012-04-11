@@ -3,7 +3,7 @@ require "test/unit"
 require 'jinx/helpers/partial_order'
 
 class Queued
-  include CaRuby::PartialOrder
+  include Jinx::PartialOrder
 
   attr_reader :queue
 
