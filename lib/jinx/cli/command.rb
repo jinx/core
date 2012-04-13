@@ -8,7 +8,7 @@ module Jinx
     log_ndx = ARGV.index("--log") || ARGV.index("-l")
     log_file = log_ndx ? ARGV[log_ndx + 1] : ENV['LOG']
     debug = ARGV.include?('--debug') || ENV['DEBUG'] =~ /true/i
-    Log.instance.open(log_file, :debug => debug)
+    Log.instance.open(log_file, :debug => debug) if log_file or debug
 
     # Command-line parsing errors.
     class CommandError < StandardError; end
