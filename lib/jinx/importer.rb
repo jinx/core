@@ -1,4 +1,5 @@
 require 'jinx/helpers/transitive_closure'
+require 'jinx/metadata'
 
 module Jinx
   # Importer extends a module with Java class import support. Importer is an aspect
@@ -73,10 +74,12 @@ module Jinx
         # Incrementally resolve the module.
         name.split('::').inject(self) { |ctxt, mod| ctxt.const_get(mod) }
       rescue NameError
-        raise unless @parent_module
-        mod = @parent_module.module_for_name(name)
+        # If the application domain module set the parent module i.v.. then continue
+        # the look-up in that parent importer.
+        raise unless @parent_importer
+        mod = @parent_importer.module_for_name(name)
         if mod then
-          logger.debug { "Module #{name} found in #{qp} parent module #{@parent_module}." }
+          logger.debug { "Module #{name} found in #{qp} parent module #{@parent_importer}." }
         end
         mod
       end
@@ -191,8 +194,6 @@ module Jinx
       # Mark the class as introspected. Do this first to preclude a recursive loop back
       # into this method when the references are introspected below.
       @introspected << klass
-      # The domain module.
-      mod = klass.parent_module
       # Add the superclass meta-data if necessary.
       if Class === klass then
         sc = klass.superclass
@@ -214,6 +215,7 @@ module Jinx
       # Set the class domain module.
       klass.domain_module = self
       # Add referenced domain class metadata as necessary.
+      mod = klass.parent_module
       klass.each_property do |prop|
         ref = prop.type
         if ref.nil? then Jinx.fail(MetadataError, "#{self} #{prop} domain type is unknown.") end
