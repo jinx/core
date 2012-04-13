@@ -14,3 +14,4 @@ module Model
   # The base fixture model definitions.
   BASE = File.dirname(__FILE__) + '/../definitions/model/base'
 end
+

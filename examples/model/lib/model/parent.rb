@@ -1,9 +1,7 @@
 module Model
   class Parent
-    # A parent owns children. This dependency is flagged as logical, indicating
-    # that a persistence service must explicitly save the referenced children
-    # when saving the parent.
-    property :children, :dependent, :logical
+    # A parent owns children.
+    property :children, :dependent
     
     # The parent dependent attribute references a Dependent. The dependent
     # attribute is, not surprisingly, designated as a dependent reference.
