@@ -14,11 +14,25 @@ require 'jinx/resource/inversible'
 
 module Jinx
   # This Resource module enhances application domain classes with the following features:
-  # * defaults
-  # * validation
+  # * meta-data introspection
   # * dependency
   # * inverse integrity
+  # * defaults
+  # * validation
   # * copy/merge
+  #
+  # A application domain module becomes jinxed by including {Resource} and specifying
+  # the Java package and optional JRuby class mix-in definitions.
+  #
+  # @example
+  #   # The application domain module
+  #   module Domain
+  #     include Jinx::Resource  
+  #     # The caTissue Java package name.
+  #     packages 'app.domain'
+  #     # The JRuby mix-ins directory.
+  #     definitions File.expand_path('domain', dirname(__FILE__))
+  #   end
   module Resource
     include Mergeable, Inversible
     
