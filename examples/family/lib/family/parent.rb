@@ -3,10 +3,8 @@ module Family
     # The SSN is a secondary key
     property :ssn, :secondary_key
     
-    # A parent owns children. This dependency is flagged as logical, indicating
-    # that the persistence service must explicitly save the referenced children
-    # when saving the parent.
-    property :children, :dependent, :logical
+    # A parent owns children.
+    property :children, :dependent
     
     # The spouse is an independent reference. The spouse is an idempotent inverse,
     # i.e. parent = parent.spouse.spouse.

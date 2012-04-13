@@ -1,12 +1,12 @@
 require 'jinx/helpers/module'
 require 'jinx/import/java'
-require 'jinx/metadata/properties'
+require 'jinx/metadata/propertied'
 require 'jinx/metadata/java_property'
 
 module Jinx
   # Meta-data mix-in to infer attribute meta-data from Java properties.
   module Introspector
-    include Properties
+    include Propertied
     
     # @return [Boolean] whether this class has been introspected
     def introspected?
@@ -35,9 +35,7 @@ module Jinx
     # This contrasts with a Ruby alias, where the alias remains bound to the
     # original method body.
     def introspect
-      # the module corresponding to the Java package of this class
-      mod = parent_module
-      # Set up the attribute data structures; delegates to Properties.
+      # Set up the attribute data structures; delegates to Propertied.
       init_property_classifiers
       logger.debug { "Introspecting #{qp} metadata..." }
       # check for method conflicts
@@ -170,14 +168,6 @@ module Jinx
       define_method(aliaz) { send(rdr) }
       define_method("#{aliaz}=".to_sym) { |value| send(wtr, value) }
       register_property_alias(aliaz, attribute)
-    end
-
-    # Makes a new synthetic attribute for each _method_ => _original_ hash entry.
-    #
-    # @param (see Class#offset_attr_accessor)
-    def offset_attribute(hash, offset=nil)
-      offset_attr_accessor(hash, offset)
-      hash.each { |ja, original| add_attribute(ja, property(original).type) }
     end
   end
 end

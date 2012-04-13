@@ -15,10 +15,6 @@ module Model
     end
     
     context '1:N' do
-      it "should set the logical flag" do
-        Parent.property(:children).logical?.should be true
-      end
-
       it "should set the inverses" do
         Child.property(:parent).inverse.should be :children
         Parent.property(:children).inverse.should be :parent

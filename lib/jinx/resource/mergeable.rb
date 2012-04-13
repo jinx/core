@@ -20,13 +20,13 @@ module Jinx
     #
     # If other is not a Hash, then the other object's attributes values are merged into
     # this object. The default attributes is this mergeable's class
-    # {Properties#mergeable_attributes}.
+    # {Propertied#mergeable_attributes}.
     #
     # The merge is performed by calling {#merge_attribute} on each attribute with the matches
     # and merger block given to this method.
     #
     # @param [Mergeable, {Symbol => Object}] other the source domain object or value hash to merge from
-    # @param [<Symbol>, nil] attributes the attributes to merge (default {Properties#nondomain_attributes})
+    # @param [<Symbol>, nil] attributes the attributes to merge (default {Propertied#nondomain_attributes})
     # @param [{Resource => Resource}, nil] the optional merge source => target reference matches
     # @yield [attribute, oldval, newval] the optional merger block
     # @yieldparam [Symbol] attribute the merge target attribute
