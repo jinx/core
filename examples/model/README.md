@@ -8,7 +8,7 @@ The associations are as follows:
 
 * Child is-a Person
 
-* 1 Parent : N Children (bidirectonal logical dependent)
+* 1 Parent : N Children (bidirectonal dependent)
 
 * 1 Parent : 1 spouse Parent (bidirectonal independent)
 
