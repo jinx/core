@@ -47,7 +47,7 @@ module Jinx
     private
     
     # @param [Resource] obj the visiting object
-    # @return [Properties::Filter] the attributes to visit
+    # @return [Propertied::Filter] the attributes to visit
     def attributes_to_visit(obj)
       @flt_sel.call(obj)
     end
