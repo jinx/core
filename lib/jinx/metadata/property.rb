@@ -358,23 +358,18 @@ module Jinx
       logger.debug { "Cleared #{@declarer.qp}.#{self} inverse." }
     end
     
-    # This method issues a warning log message if the flag is not in the {SUPPORTED_FLAGS}.
-    # 
     # @param [Symbol] the flag to set
+    # @raise [ArgumentError] if the flag is not supported
     def set_flag(flag)
       return if @flags.include?(flag)
-      logger.warn("Property #{self} flag not supported: #{flag.qp}") unless flag_supported?(flag)
+      unless flag_supported?(flag) then
+        Jinx.fail(ArgumentError, "Property #{declarer.name}.#{self} flag not supported: #{flag.qp}")
+      end
       @flags << flag
       case flag
         when :owner then owner_flag_set
         when :dependent then dependent_flag_set
       end
-    end
-    
-    # @param [Symbol] the flag to set
-    # @return [Boolean] whether the flag is supported
-    def flag_supported?(flag)
-      SUPPORTED_FLAGS.include?(flag)
     end
     
     # This method is called when the owner flag is set.

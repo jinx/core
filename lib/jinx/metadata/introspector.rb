@@ -77,7 +77,7 @@ module Jinx
         return
       end
       # the standard underscore lower-case attributes
-      ja = create_java_property(pd).attribute
+      ja = add_java_property(pd).attribute
       # delegate the standard attribute accessors to the attribute accessors
       alias_property_accessors(ja, pd.name)
       # add special wrappers
@@ -146,9 +146,9 @@ module Jinx
     #
     # @param (see #define_java_property)
     # @return [Property] the new property
-    def create_java_property(pd)
+    def add_java_property(pd)
       # make the attribute metadata
-      prop = JavaProperty.new(pd, self)
+      prop = create_java_property(pd)
       add_property(prop)
       # the property name is an alias for the standard attribute
       pa = prop.attribute
@@ -156,6 +156,12 @@ module Jinx
       ja = pd.name.to_sym
       delegate_to_attribute(ja, pa) unless pa == ja
       prop
+    end
+    
+    # @param (see #add_java_property)
+    # @return (see #add_java_property)
+    def create_java_property(pd)
+      JavaProperty.new(pd, self)
     end
 
     # Defines methods _aliaz_ and _aliaz=_ which calls the standard _attribute_ and

@@ -5,6 +5,8 @@ require File.dirname(__FILE__) + '/../../examples/model/ext/bin/model.jar'
 module Model
   include Jinx::Resource
   
+  extend Jinx::Importer
+  
   # The Java package name.
   packages 'domain'
   

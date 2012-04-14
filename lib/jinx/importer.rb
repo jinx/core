@@ -207,7 +207,10 @@ module Jinx
         klass.class_eval { include m }
       end
       # Add introspection capability to the class.
-      klass.extend(Metadata)
+      md_mod = @metadata_module || Metadata
+      
+      logger.debug { "Extending #{self}::#{klass.qp} with #{md_mod.name}..." }
+      klass.extend(md_mod)
       
       # Introspect the Java properties.
       introspect(klass)
