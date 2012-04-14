@@ -583,14 +583,6 @@ module Jinx
     DEPENDENT_VISITOR = Jinx::ReferenceVisitor.new { |obj| obj.class.dependent_attributes }
 
     DEF_MATCHER = Matcher.new
-    
-    # Extends the including module with an {Importer}.
-    #
-    # @param [Module] mod the module which includes this Resource mix-in
-    def self.included(mod)
-      super
-      mod.extend(Importer)
-    end
 
     # Sets the default attribute values for this domain object. Unlike {#add_defaults}, this
     # method does not set defaults for dependents. This method sets the configuration values

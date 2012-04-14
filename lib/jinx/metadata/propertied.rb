@@ -31,7 +31,7 @@ module Jinx
     # @param flags (see Property#initialize)
     # @return [Property] the attribute meta-data
     def add_attribute(attribute, type, *flags)
-      prop = Property.new(attribute, self, type, *flags)
+      prop = create_nonjava_property(attribute, type, *flags)
       add_property(prop)
       prop
     end
@@ -246,6 +246,12 @@ module Jinx
       @local_mndty_flt = Set.new
       @local_defaults = {}
       @defaults = append_ancestor_enum(@local_defaults) { |par| par.defaults }
+    end
+              
+    # @param (see #add_attribute)
+    # @return (see #add_attribute) 
+    def create_nonjava_property(attribute, type, *flags)
+      Property.new(attribute, self, type, *flags)
     end
     
     # Returns the most specific attribute which references the given target type, or nil if none.

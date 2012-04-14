@@ -5,6 +5,8 @@ require File.dirname(__FILE__) + '/../ext/bin/family.jar'
 module Family
   include Jinx::Resource
   
+  extend Jinx::Importer
+  
   # The Java package name.
   packages 'family'
   
