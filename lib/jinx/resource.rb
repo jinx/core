@@ -324,6 +324,13 @@ module Jinx
       matches_key_attributes?(other, self.class.alternate_key_attributes)
     end
 
+    # @param [Resource] the domain object to match
+    # @return [Boolean] whether this object matches the other object on class
+    #   and every non-nil, non-empty attribute
+    def content_matches?(other)
+      content_matches_recursive?(other)
+    end
+
     # Matches this dependent domain object with the others on type and key attributes
     # in the scope of a parent object.
     # Returns the object in others which matches this domain object, or nil if none.
@@ -729,6 +736,34 @@ module Jinx
       else
         self.class.fetched_attributes
       end
+    end
+    
+    # @param [Resource] (see #content_matches?) 
+    # @param [<Resource>] visited the matched references
+    # @return (see #content_matches?)
+    def content_matches_recursive?(other, visited=Set.new)
+      return false unless self.class == other.class
+      return false unless self.class.nondomain_attributes.all? do |pa|
+        v = send(pa)
+        v.nil? or v == other.send(pa)
+      end  
+      self.class.domain_attributes.all? do |pa|
+        v = send(pa)
+        ov = other.send(pa)
+        if v.nil? then
+          true
+        elsif Enumerable === v then
+          v.all? do |ref|
+            oref = ref.match_in(ov)
+            oref and ref.content_matches_recursive?(oref, visited)
+          end
+        elsif visited.include?(v) then
+          true
+        else
+          visited << v
+          v.content_matches_recursive?(ov, visited)
+        end
+      end  
     end
 
     # Returns whether this domain object matches the other domain object as follows:
