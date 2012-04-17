@@ -80,7 +80,8 @@ module Jinx
       @prop_hash.each_value(&block)
     end
 
-    # @return the Property for the given attribute symbol or alias
+    # @param [Symbol] attribute the property attribute symbol or alias
+    # @return [Property] the corresponding property
     # @raise [NameError] if the attribute is not recognized
     def property(attribute)
       # Simple and predominant case is that the attribute is a standard attribute.
