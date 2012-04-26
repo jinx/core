@@ -159,6 +159,9 @@ module Enumerable
   # Returns an Enumerable which iterates over items in this Enumerable and the other Enumerable in sequence.
   # Unlike the Array plus (+) operator, {#union} reflects changes to the underlying enumerators.
   #
+  # @quirk Cucumber Cucumber defines it's own Enumerable union monkey-patch. Work around this in the short
+  #   term by trying to call the super first.
+  #
   # @example
   #   a = [1, 2]
   #   b = [4, 5]
@@ -170,7 +173,7 @@ module Enumerable
   # @param [Enumerable] other the Enumerable to compose with this Enumerable
   # @return [Enumerable] an enumerator over self followed by other
   def union(other)
-    Jinx::MultiEnumerator.new(self, other)
+    super rescue Jinx::MultiEnumerator.new(self, other)
   end
 
   alias :+ :union
