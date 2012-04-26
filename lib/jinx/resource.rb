@@ -85,7 +85,7 @@ module Jinx
     # @return [Resource] this domain object
     # @raise (see #validate_local)
     def validate
-      if not @validated then
+      unless @validated then
         validate_local
         @validated = true
       end
@@ -324,10 +324,23 @@ module Jinx
       matches_key_attributes?(other, self.class.alternate_key_attributes)
     end
 
+    # Matches this domain object with the other domain object. The match
+    # succeeds if and only if the object classes match and for each
+    # attribute, at least one of the following conditions hold:
+    # * this object's attribute value is nil or empty
+    # * the other object's attribute value is nil or empty
+    # * if the attribute is a nondomain attribute, then the respective values
+    #   are equal
+    # * if the attribute value is a Resource, then the value recursively
+    #   matches the other value
+    # * if the attribute value is a Resource collection, then every
+    #   item in the collection matches some item in the other collection
+    #
     # @param [Resource] the domain object to match
     # @return [Boolean] whether this object matches the other object on class
-    #   and every non-nil, non-empty attribute
+    #   and content
     def content_matches?(other)
+      logger.debug { "Matching #{self} content against #{other}..." }
       content_matches_recursive?(other)
     end
 
@@ -479,9 +492,6 @@ module Jinx
     # Prints this domain object's content and recursively prints the referenced content.
     # The optional selector block determines the attributes to print. The default is the
     # {Propertied#java_attributes}.
-    #
-    #
-    # TODO caRuby override to do_without_lazy_loader
     # 
     # @yield [owner] the owner attribute selector
     # @yieldparam [Resource] owner the domain object to print
@@ -575,6 +585,46 @@ module Jinx
       add_defaults_local
       # Recurse to the dependents.
       each_defaultable_reference { |ref| ref.add_defaults_recursive }
+    end
+    
+    # @param [Resource] (see #content_matches?) 
+    # @param [<Resource>] visited the matched references
+    # @return (see #content_matches?)
+    def content_matches_recursive?(other, visited=Set.new)
+      return false unless self.class == other.class
+      return false unless self.class.nondomain_attributes.all? do |pa|
+        v = send(pa)
+        ov = other.send(pa)
+        if v.nil? || ov.nil? or Resource.value_equal?(v, ov) then
+          true
+        else
+          logger.debug { "#{self} does not match #{other} on property #{pa}: #{v.qp} vs #{ov.qp}" }
+          false
+        end
+      end  
+      self.class.domain_attributes.all? do |pa|
+        v = send(pa)
+        ov = other.send(pa)
+        if v.nil_or_empty? or ov.nil_or_empty? or visited.include?(v) then
+          true
+        else
+          logger.debug { "Matching #{self} #{pa} value #{v.qp} against #{other} #{pa} value #{ov.qp}..." }
+          if Enumerable === v then
+            v.all? do |ref|
+              oref = ref.match_in(ov)
+              if oref.nil? then
+                logger.debug { "#{self} does not match #{other} on property #{pa}: #{v.pp_s} vs #{ov.pp_s}" }
+                false
+              else
+                ref.content_matches_recursive?(oref, visited)
+              end
+            end
+          else
+            visited << v
+            v.content_matches_recursive?(ov, visited)
+          end
+        end
+      end  
     end
 
     private
@@ -736,34 +786,6 @@ module Jinx
       else
         self.class.fetched_attributes
       end
-    end
-    
-    # @param [Resource] (see #content_matches?) 
-    # @param [<Resource>] visited the matched references
-    # @return (see #content_matches?)
-    def content_matches_recursive?(other, visited=Set.new)
-      return false unless self.class == other.class
-      return false unless self.class.nondomain_attributes.all? do |pa|
-        v = send(pa)
-        v.nil? or v == other.send(pa)
-      end  
-      self.class.domain_attributes.all? do |pa|
-        v = send(pa)
-        ov = other.send(pa)
-        if v.nil? then
-          true
-        elsif Enumerable === v then
-          v.all? do |ref|
-            oref = ref.match_in(ov)
-            oref and ref.content_matches_recursive?(oref, visited)
-          end
-        elsif visited.include?(v) then
-          true
-        else
-          visited << v
-          v.content_matches_recursive?(ov, visited)
-        end
-      end  
     end
 
     # Returns whether this domain object matches the other domain object as follows:
