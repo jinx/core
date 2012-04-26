@@ -69,6 +69,7 @@ module Jinx
     
     # @param [String] the module name to resolve in the context of this module
     # @return [Module] the corresponding module
+    # @raise [NameError] if the name cannot be resolved
     def module_for_name(name)
       begin
         # Incrementally resolve the module.

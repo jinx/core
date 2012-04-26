@@ -19,16 +19,16 @@ module Jinx
       # * improve the output messages
       # * print an exception to stderr as well as the log
       def start(*args, &block)
-        status = 1
+        rc = 1
         begin
-          status = run(*args, &block)
+          rc = run(*args, &block)
         rescue
           log(FATAL, "#{@appname} detected an exception: #{$!}\n#{$@.qp}")
           msg = "#{@appname} was unsuccessful: #{$!}."
           msg += "\nSee the log #{Log.instance.file} for more information." if Log.instance.file
           $stderr.puts msg
         ensure
-          log(INFO, "#{@appname} completed with status #{status}.")
+          log(INFO, "#{@appname} completed with status #{rc}.")
         end
       end
     end
