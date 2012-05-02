@@ -33,11 +33,11 @@ module Jinx
       @ref_enums = {}
       super do |ref|
         # the reference property filter
-        attrs = attributes_to_visit(ref)
-        if attrs then
-          logger.debug { "#{qp} visiting #{ref} attributes #{attrs.pp_s(:single_line)}..." } if @verbose
+        ras = attributes_to_visit(ref)
+        if ras then
+          logger.debug { "#{qp} visiting #{ref} attributes #{ras.pp_s(:single_line)}..." } if @verbose
           # an enumerator on the reference properties
-          enum = ReferenceEnumerator.new(ref, attrs.properties)
+          enum = ReferenceEnumerator.new(ref, ras.properties)
           # If there is a reference filter, then apply it to the enum references.
           flt ? enum.filter(&flt) : enum
         end
