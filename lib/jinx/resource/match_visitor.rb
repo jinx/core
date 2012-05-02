@@ -35,9 +35,11 @@ module Jinx
       # only a matched reference is visited.
       super do |src|
         tgt = @matches[src]
-        attrs = yield(src)
-        match_references(src, tgt, attrs)
-        attrs
+        # the attributes to match on
+        mas = yield(src)
+        # match the attribute references
+        match_references(src, tgt, mas)
+        mas
       end
     end
 

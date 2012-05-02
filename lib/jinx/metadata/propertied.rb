@@ -218,9 +218,14 @@ module Jinx
     # @return [AttributeEnumerator] a new attribute enumerator
     def attribute_filter(attributes=nil, &filter)
       # make the attribute filter
-      raise MetadataError.new("#{self} has not been introspected") if @prop_hash.nil?
+      raise MetadataError.new("#{self} has not been introspected") unless introspected?
       ph = attributes ? attributes.to_compact_hash { |pa| @prop_hash[pa] } : @prop_hash
       AttributeEnumerator.new(ph, &filter)
+    end
+       
+    # @return [Boolean] whether this class's metadata has been introspected
+    def introspected?
+      !!@prop_hash
     end
 
     protected
