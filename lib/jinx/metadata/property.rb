@@ -121,13 +121,13 @@ module Jinx
       begin
         @inv_prop = type.property(attribute)
       rescue NameError => e
-        Jinx.fail(MetadataError, "#{@declarer.qp}.#{self} inverse attribute #{type.qp}.#{attribute} not found", e)
+        raise MetadataError.new("#{@declarer.qp}.#{self} inverse attribute #{type.qp}.#{attribute} not found")
       end
       # the inverse of the inverse
       inv_inv_prop = @inv_prop.inverse_property
       # If the inverse of the inverse is already set to a different attribute, then raise an exception.
       if inv_inv_prop and not (inv_inv_prop == self or inv_inv_prop.restriction?(self))
-        Jinx.fail(MetadataError, "Cannot set #{type.qp}.#{attribute} inverse attribute to #{@declarer.qp}.#{self}@#{object_id} since it conflicts with existing inverse #{inv_inv_prop.declarer.qp}.#{inv_inv_prop}@#{inv_inv_prop.object_id}")
+        raise MetadataError.new("Cannot set #{type.qp}.#{attribute} inverse attribute to #{@declarer.qp}.#{self}@#{object_id} since it conflicts with existing inverse #{inv_inv_prop.declarer.qp}.#{inv_inv_prop}@#{inv_inv_prop.object_id}")
       end
       # Set the inverse of the inverse to this attribute.
       @inv_prop.inverse = @attribute
@@ -270,10 +270,10 @@ module Jinx
       rtype = opts[:type] || @type
       rinv = opts[:inverse] || inverse
       unless declarer < @declarer then
-        Jinx.fail(ArgumentError, "Cannot restrict #{@declarer.qp}.#{self} to an incompatible declarer type #{declarer.qp}")
+        raise ArgumentError.new("Cannot restrict #{@declarer.qp}.#{self} to an incompatible declarer type #{declarer.qp}")
       end
       unless rtype <= @type then
-        Jinx.fail(ArgumentError, "Cannot restrict #{@declarer.qp}.#{self}({@type.qp}) to an incompatible return type #{rtype.qp}")
+        raise ArgumentError.new("Cannot restrict #{@declarer.qp}.#{self}({@type.qp}) to an incompatible return type #{rtype.qp}")
       end
       # Copy this attribute and its instance variables minus the restrictions and make a deep copy of the flags.
       rst = deep_copy
@@ -318,7 +318,7 @@ module Jinx
     # @param [Class] klass the declaring class of this restriction attribute
     def set_restricted_declarer(klass)
       if @declarer and not klass < @declarer then
-        Jinx.fail(MetadataError, "Cannot reset #{declarer.qp}.#{self} declarer to #{type.qp}")
+        raise MetadataError.new("Cannot reset #{declarer.qp}.#{self} declarer to #{type.qp}")
       end
       @declarer = klass
       @declarer.add_restriction(self)
@@ -363,7 +363,7 @@ module Jinx
     def set_flag(flag)
       return if @flags.include?(flag)
       unless flag_supported?(flag) then
-        Jinx.fail(ArgumentError, "Property #{declarer.name}.#{self} flag not supported: #{flag.qp}")
+        raise ArgumentError.new("Property #{declarer.name}.#{self} flag not supported: #{flag.qp}")
       end
       @flags << flag
       case flag
@@ -379,11 +379,11 @@ module Jinx
     # @raise [MetadataError] if this attribute is dependent or an inverse could not be inferred
     def owner_flag_set
       if dependent? then
-        Jinx.fail(MetadataError, "#{declarer.qp}.#{self} cannot be set as a #{type.qp} owner since it is already defined as a #{type.qp} dependent")
+        raise MetadataError.new("#{declarer.qp}.#{self} cannot be set as a #{type.qp} owner since it is already defined as a #{type.qp} dependent")
       end
       inv_attr = type.dependent_attribute(@declarer)
       if inv_attr.nil? then
-        Jinx.fail(MetadataError, "#{@declarer.qp} owner attribute #{self} does not have a #{type.qp} dependent inverse")
+        raise MetadataError.new("#{@declarer.qp} owner attribute #{self} does not have a #{type.qp} dependent inverse")
       end
       logger.debug { "#{declarer.qp}.#{self} inverse is the #{type.qp} dependent attribute #{inv_attr}." }
       self.inverse = inv_attr
@@ -394,7 +394,7 @@ module Jinx
     # @raise [MetadataError] if this is an owner attribute
     def dependent_flag_set
       if owner? then
-        Jinx.fail(MetadataError, "#{declarer.qp}.#{self} cannot be set as a  #{type.qp} dependent since it is already defined as a #{type.qp} owner")
+        raise MetadataError.new("#{declarer.qp}.#{self} cannot be set as a  #{type.qp} dependent since it is already defined as a #{type.qp} owner")
       end
     end
   end

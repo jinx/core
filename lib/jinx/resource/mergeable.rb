@@ -125,7 +125,7 @@ module Jinx
       if prop.collection? then
         # TODO - refactor into method
         if oldval.nil? then
-          Jinx.fail(ValidationError, "Merge into #{qp} #{prop} with nil collection value is not supported")
+          raise ValidationError.new("Merge into #{qp} #{prop} with nil collection value is not supported")
         end
         # the references to add
         adds = []

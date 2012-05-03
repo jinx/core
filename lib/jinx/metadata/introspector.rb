@@ -169,7 +169,7 @@ module Jinx
     # Calling rather than aliasing the attribute accessor allows the aliaz accessor to
     # reflect a change to the attribute accessor.
     def delegate_to_attribute(aliaz, attribute)
-      if aliaz == attribute then Jinx.fail(MetadataError, "Cannot delegate #{self} #{aliaz} to itself.") end
+      if aliaz == attribute then raise MetadataError.new("Cannot delegate #{self} #{aliaz} to itself.") end
       rdr, wtr = property(attribute).accessors
       define_method(aliaz) { send(rdr) }
       define_method("#{aliaz}=".to_sym) { |value| send(wtr, value) }

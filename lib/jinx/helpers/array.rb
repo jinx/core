@@ -4,7 +4,7 @@ class Array
   # The EMPTY_ARRAY constant is an immutable empty array, used primarily as a default argument.
   class << EMPTY_ARRAY ||= Array.new
     def <<(value)
-      Jinx.fail(NotImplementedError, "Modification of the constant empty array is not supported")
+      raise NotImplementedError.new("Modification of the constant empty array is not supported")
     end
   end
 
@@ -64,7 +64,7 @@ class Array
   def to_assoc_hash
     hash = {}
     each do |item|
-      Jinx.fail(ArgumentError, "Array member must be an array: #{item.pp_s(:single_line)}") unless Array === item
+      raise ArgumentError.new("Array member must be an array: #{item.pp_s(:single_line)}") unless Array === item
       key = item.first
       if item.size < 2 then
         value = nil
@@ -100,7 +100,7 @@ class Array
     rescue NoMethodError
       raise e
     rescue
-      Jinx.fail(ArgumentError, "Can't convert #{other.class.name} to array")
+      raise ArgumentError.new("Can't convert #{other.class.name} to array")
     end
   end
 

@@ -8,7 +8,7 @@ module Jinx
     # Raises TypeError if value is neither nil nor a String.
     def uniquify_value(value)
       unless String === value or value.nil? then
-        Jinx.fail(TypeError, "Cannot uniquify #{qp} non-String value #{value}")
+        raise TypeError.new("Cannot uniquify #{qp} non-String value #{value}")
       end
       Uniquifier.instance.uniquify(self, value)
     end

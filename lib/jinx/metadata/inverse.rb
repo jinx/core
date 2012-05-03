@@ -56,7 +56,7 @@ module Jinx
       end
       # This class must be the same as or a subclass of the inverse attribute type.
       unless self <= inv_prop.type then
-        Jinx.fail(TypeError, "Cannot set #{qp}.#{pa} inverse to #{prop.type.qp}.#{pa} with incompatible type #{inv_prop.type.qp}")
+        raise TypeError.new("Cannot set #{qp}.#{pa} inverse to #{prop.type.qp}.#{pa} with incompatible type #{inv_prop.type.qp}")
       end
       # Set the inverse in the attribute metadata.
       prop.inverse = inverse

@@ -20,7 +20,7 @@ module Jinx
     # @yield (see ReferenceVisitor#initialize)
     # @yieldparam [Resource] source the matched source object
     def initialize(opts=nil)
-      Jinx.fail(ArgumentError, "Reference visitor missing domain reference selector") unless block_given?
+      raise ArgumentError.new("Reference visitor missing domain reference selector") unless block_given?
       opts = Options.to_hash(opts)
       @matcher = opts.delete(:matcher) || DEF_MATCHER
       @matchable = opts.delete(:matchable)
@@ -100,7 +100,7 @@ module Jinx
     # @raise [ValidationError] if there is no match
     def match_for_visited(source)
       target = @matches[source]
-      if target.nil? then Jinx.fail(ValidationError, "Match visitor target not found for #{source}") end
+      if target.nil? then raise ValidationError.new("Match visitor target not found for #{source}") end
       target
     end
 

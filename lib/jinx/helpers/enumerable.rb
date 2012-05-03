@@ -31,7 +31,7 @@ module Enumerable
   # @raise [ArgumentError] if the generator block is not given
   # @see #hashify
   def to_compact_hash
-    Jinx.fail(ArgumentError, "Compact hash builder is missing the value generator block") unless block_given?
+    raise ArgumentError.new("Compact hash builder is missing the value generator block") unless block_given?
     to_compact_hash_with_index { |item, index| yield item }
   end
 

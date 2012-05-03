@@ -196,7 +196,7 @@ module Jinx
     # @yieldparam children the nodes slated by this Visitor to visit next
     # @raise [ArgumentError] if a block is not given to this method
     def filter
-      Jinx.fail(ArgumentError, "A filter block is not given to the visitor filter method") unless block_given?
+      raise ArgumentError.new("A filter block is not given to the visitor filter method") unless block_given?
       Visitor.new(@options) { |node| yield(node, node_children(node)) }
     end
   
@@ -319,7 +319,7 @@ module Jinx
       def visit(*nodes)
         if nodes.size == 1 then
           nodes = nodes.first
-          Jinx.fail(ArgumentError, "Sync visitor requires a pair of entry nodes") unless nodes.size == 2
+          raise ArgumentError.new("Sync visitor requires a pair of entry nodes") unless nodes.size == 2
         end
         super(nodes)
       end
@@ -331,7 +331,7 @@ module Jinx
       def to_enum(*nodes)
         if nodes.size == 1 then
           nodes = nodes.first
-          Jinx.fail(ArgumentError, "Sync visitor requires a pair of entry nodes") unless nodes.size == 2
+          raise ArgumentError.new("Sync visitor requires a pair of entry nodes") unless nodes.size == 2
         end
         super(nodes)
       end

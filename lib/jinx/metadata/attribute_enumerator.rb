@@ -10,7 +10,7 @@ module Jinx
     # @yieldparam [Property] the metadata for the standard attribute
     # @raise [ArgumentError] if a parameter is missing 
     def initialize(hash, &filter)
-      Jinx.fail(ArgumentError, "Attribute filter missing hash argument") if hash.nil?
+      raise ArgumentError.new("Attribute filter missing hash argument") if hash.nil?
       @hash = hash
       @filter = block_given? ? filter : Proc.new { true }
     end

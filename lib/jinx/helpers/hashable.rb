@@ -392,7 +392,7 @@ module Jinx
       attr_reader :components
 
       def initialize(*hashes)
-        if hashes.include?(nil) then Jinx.fail(ArgumentError, "MultiHash is missing a component hash.") end
+        if hashes.include?(nil) then raise ArgumentError.new("MultiHash is missing a component hash.") end
         @components = hashes
       end
 

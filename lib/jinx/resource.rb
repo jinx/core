@@ -104,7 +104,7 @@ module Jinx
       if attributes.empty? then
         attributes = self.class.nondomain_attributes
       elsif Enumerable === attributes.first then
-        Jinx.fail(ArgumentError, "#{qp} copy attributes argument is not a Symbol: #{attributes.first}") unless attributes.size == 1
+        raise ArgumentError.new("#{qp} copy attributes argument is not a Symbol: #{attributes.first}") unless attributes.size == 1
         attributes = attributes.first
       end
       self.class.new.merge_attributes(self, attributes)
@@ -208,7 +208,7 @@ module Jinx
     # @raise [NoMethodError] if this Resource's class does not have exactly one owner attribute
     def owner=(owner)
       pa = self.class.owner_attribute
-      if pa.nil? then Jinx.fail(NoMethodError, "#{self.class.qp} does not have a unique owner attribute") end
+      if pa.nil? then raise NoMethodError.new("#{self.class.qp} does not have a unique owner attribute") end
       set_property_value(pa, owner)
     end
 
@@ -671,7 +671,7 @@ module Jinx
       invalid = missing_mandatory_attributes
       unless invalid.empty? then
         logger.error("Validation of #{qp} unsuccessful - missing #{invalid.join(', ')}:\n#{dump}")
-        Jinx.fail(ValidationError, "Required attribute value missing for #{self}: #{invalid.join(', ')}")
+        raise ValidationError.new("Required attribute value missing for #{self}: #{invalid.join(', ')}")
       end
       validate_owner
     end
@@ -689,12 +689,12 @@ module Jinx
       if self.class.owner_attributes.size > 1 then
         vh = value_hash(self.class.owner_attributes)
         if vh.size > 1 then
-          Jinx.fail(ValidationError, "Dependent #{self} references multiple owners #{vh.pp_s}:\n#{dump}")
+          raise ValidationError.new("Dependent #{self} references multiple owners #{vh.pp_s}:\n#{dump}")
         end
       end
       # If there is an owner reference attribute, then there must be an owner.
       if self.class.bidirectional_dependent? then
-        Jinx.fail(ValidationError, "Dependent #{self} does not reference an owner")
+        raise ValidationError.new("Dependent #{self} does not reference an owner")
       end
     end
     
