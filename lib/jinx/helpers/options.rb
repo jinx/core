@@ -17,7 +17,7 @@ class Options
   # If default is nil and a block is given to this method, then the default is determined
   # by calling the block with no arguments. The block can also be used to raise a missing
   # option exception, e.g.:
-  #   Options.get(:userid, options) { Jinx.fail(RuntimeError, "Missing required option: userid") }
+  #   Options.get(:userid, options) { raise RuntimeError.new("Missing required option: userid") }
   #
   # @example
   #   Options.get(:create, {:create => true}) #=> true
@@ -41,7 +41,7 @@ class Options
       when Symbol then
         option == options or default(default, &block)
       else
-        Jinx.fail(ArgumentError, "Options argument type is not supported; expected Hash or Symbol, found: #{options.class}")
+        raise ArgumentError.new("Options argument type is not supported; expected Hash or Symbol, found: #{options.class}")
     end
   end
 
@@ -64,7 +64,7 @@ class Options
       case opt
         when Symbol then hash[opt] = true
         when Hash then hash.merge!(opt)
-        else Jinx.fail(ArgumentError, "Expected a symbol or hash option, found #{opt.qp}")
+        else raise ArgumentError.new("Expected a symbol or hash option, found #{opt.qp}")
       end
     end
     hash
@@ -74,7 +74,7 @@ class Options
   # @raise [ValidationError] if the given options are not in the given allowable choices
   def self.validate(options, choices)
     to_hash(options).each_key do |opt|
-      Jinx.fail(ValidationError, "Option is not supported: #{opt}") unless choices.include?(opt)
+      raise ValidationError.new("Option is not supported: #{opt}") unless choices.include?(opt)
     end
   end
 

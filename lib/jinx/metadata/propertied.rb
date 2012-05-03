@@ -19,7 +19,7 @@ module Jinx
     # @return [Boolean] whether there is a corresponding attribute
     def property_defined?(symbol)
       unless Symbol === symbol then
-        Jinx.fail(ArgumentError, "Property argument #{symbol.qp} of type #{symbol.class.qp} is not a symbol")
+        raise ArgumentError.new("Property argument #{symbol.qp} of type #{symbol.class.qp} is not a symbol")
       end
       !!@alias_std_prop_map[symbol.to_sym]
     end
@@ -89,7 +89,7 @@ module Jinx
       prop = @prop_hash[attribute] || @prop_hash[standard_attribute(attribute)]
       # If not found, then raise a NameError.
       if prop.nil? then
-        Jinx.fail(NameError, "#{name.demodulize} attribute not found: #{attribute}")
+        raise NameError.new("#{name.demodulize} attribute not found: #{attribute}")
       end
       prop
     end
@@ -117,9 +117,9 @@ module Jinx
     # @raise [NameError] if the attribute is not found
     def standard_attribute(name_or_alias)
       if name_or_alias.nil? then
-        Jinx.fail(ArgumentError, "#{qp} standard attribute call is missing the attribute name/alias parameter")
+        raise ArgumentError.new("#{qp} standard attribute call is missing the attribute name/alias parameter")
       end
-      @alias_std_prop_map[name_or_alias.to_sym] or Jinx.fail(NameError, "#{self} attribute not found: #{name_or_alias}")
+      @alias_std_prop_map[name_or_alias.to_sym] or raise NameError.new("#{self} attribute not found: #{name_or_alias}")
     end
 
     ## Metadata ATTRIBUTE FILTERS ##
@@ -374,7 +374,7 @@ module Jinx
         prop.restrict(self, :type => klass)
         logger.debug { "Restricted #{prop.declarer.qp}.#{attribute}(#{prop.type.qp}) to #{qp} with return type #{klass.qp}." }
       else
-        Jinx.fail(ArgumentError, "Cannot reset #{qp}.#{attribute} type #{prop.type.qp} to incompatible #{klass.qp}")
+        raise ArgumentError.new("Cannot reset #{qp}.#{attribute} type #{prop.type.qp} to incompatible #{klass.qp}")
       end
     end
 
@@ -449,7 +449,7 @@ module Jinx
     # @param (see #alias_attribute)
     def register_property_alias(aliaz, attribute)
       std = standard_attribute(attribute)
-      Jinx.fail(ArgumentError, "#{self} attribute not found: #{attribute}") if std.nil?
+      raise ArgumentError.new("#{self} attribute not found: #{attribute}") if std.nil?
       @local_std_prop_hash[aliaz.to_sym] = std
     end
 
@@ -463,7 +463,7 @@ module Jinx
       return enum unless Class === self and superclass.parent_module == parent_module
       anc_enum = yield superclass
       if anc_enum.nil? then
-        Jinx.fail(MetadataError, "#{qp} superclass #{superclass.qp} does not have required metadata")
+        raise MetadataError.new("#{qp} superclass #{superclass.qp} does not have required metadata")
       end
       enum.union(anc_enum)
     end

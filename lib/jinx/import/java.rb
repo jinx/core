@@ -91,7 +91,7 @@ module Java
       # merge return a new collection.
       def merge(other)
         return self if other.nil?
-        Jinx.fail(ArgumentError, "Merge argument must be enumerable: #{other}") unless Enumerable === other
+        raise ArgumentError.new("Merge argument must be enumerable: #{other}") unless Enumerable === other
         other.each { |item| self << item }
         self
       end

@@ -115,11 +115,11 @@ module Jinx
     # @raise [ValidationError] if the inverse is nil
     def add_owner(klass, inverse, attribute=nil)
       if inverse.nil? then
-        Jinx.fail(ValidationError, "Owner #{klass.qp} missing dependent attribute for dependent #{qp}")
+        raise ValidationError.new("Owner #{klass.qp} missing dependent attribute for dependent #{qp}")
       end
       logger.debug { "Adding #{qp} owner #{klass.qp}#{' attribute ' + attribute.to_s if attribute} with inverse #{inverse}..." }
       if @owner_prop_hash then
-        Jinx.fail(MetadataError, "Can't add #{qp} owner #{klass.qp} after dependencies have been accessed")
+        raise MetadataError.new("Can't add #{qp} owner #{klass.qp} after dependencies have been accessed")
       end
       
       # detect the owner attribute, if necessary
@@ -175,7 +175,7 @@ module Jinx
       if hash.include?(otype) then
         oa = hash[otype]
         unless oa.nil? then
-          Jinx.fail(MetadataError, "Cannot set #{qp} owner attribute to #{attribute} since it is already set to #{oa}")
+          raise MetadataError.new("Cannot set #{qp} owner attribute to #{attribute} since it is already set to #{oa}")
         end
         hash[otype] = prop
       else

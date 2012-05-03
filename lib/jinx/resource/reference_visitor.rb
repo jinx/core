@@ -23,7 +23,7 @@ module Jinx
     #   current domain object
     # @yieldparam [Resource] obj the current domain object
     def initialize(opts=nil, &selector)
-      Jinx.fail(ArgumentError, "Reference visitor missing domain reference selector") unless block_given?
+      raise ArgumentError.new("Reference visitor missing domain reference selector") unless block_given?
       # the property selector
       @flt_sel = selector
       # the reference filter

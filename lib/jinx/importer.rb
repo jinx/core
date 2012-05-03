@@ -98,7 +98,7 @@ module Jinx
         begin
           eval "java_package Java::#{pkg}"
         rescue Exception => e
-          Jinx.fail(ArgumentError, "#{self} Java package #{pkg} not found - #{$!}")
+          raise ArgumentError.new("#{self} Java package #{pkg} not found - #{$!}")
         end
       end
       # The introspected classes.
@@ -222,7 +222,7 @@ module Jinx
       mod = klass.parent_module
       klass.each_property do |prop|
         ref = prop.type
-        if ref.nil? then Jinx.fail(MetadataError, "#{self} #{prop} domain type is unknown.") end
+        if ref.nil? then raise MetadataError.new("#{self} #{prop} domain type is unknown.") end
         unless @introspected.include?(ref) or ref.parent_module != mod then
           logger.debug { "Introspecting #{qp} #{prop} reference #{ref.qp}..." }
           add_metadata(ref)
