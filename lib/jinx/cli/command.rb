@@ -105,7 +105,7 @@ module Jinx
 
       # @param [{Symbol => Object}] opts the option => value hash
       def call_executor(opts)
-         if @executor.nil? then Jinx.fail(CommandError, "Command #{self} does not have an execution block") end
+         if @executor.nil? then raise CommandError.new("Command #{self} does not have an execution block") end
          @executor.call(opts)
       end
       
