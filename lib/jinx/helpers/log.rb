@@ -7,14 +7,14 @@ require 'jinx/helpers/options'
 # @param [String, IO, nil] dev the optional log file or device
 # @return [Jinx::MultilineLogger] the global logger
 def logger(dev=nil, opts=nil)
-  Jinx::Log.instance.open(dev, opts) if dev or opts
-  logger = Jinx.logger
-  logger
+  Jinx.logger(dev, opts)
 end
 
 module Jinx
-  # @return (see Log#logger)
-  def self.logger
+  # @param [String, IO, nil] dev the optional log file or device
+  # @return [Jinx::MultilineLogger] the global logger
+  def self.logger(dev=nil, opts=nil)
+    Log.instance.open(dev, opts) if dev or opts
     Log.instance.logger
   end
   
