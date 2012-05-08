@@ -87,19 +87,19 @@ module Jinx
       # Discriminate between a domain and non-domain attribute.
       prop = self.class.property(attribute)
       if prop.domain? then
-        merge_domain_attribute_value(prop, oldval, newval, matches)
+        merge_domain_property_value(prop, oldval, newval, matches)
       else
-        merge_nondomain_attribute_value(prop, oldval, newval)
+        merge_nondomain_property_value(prop, oldval, newval)
       end
     end
 
     private
 
     # @see #merge_attribute
-    def merge_nondomain_attribute_value(prop, oldval, newval)
+    def merge_nondomain_property_value(property, oldval, newval)
       if oldval.nil? then
-        send(prop.writer, newval)
-      elsif prop.collection? then
+        set_typed_property_value(property, newval)
+      elsif property.collection? then
         oldval.merge(newval)
       else
         oldval
@@ -107,12 +107,12 @@ module Jinx
     end
     
     # @see #merge_attribute
-    def merge_domain_attribute_value(prop, oldval, newval, matches)
+    def merge_domain_property_value(property, oldval, newval, matches)
       # the dependent owner writer method, if any
-      if prop.dependent? then
-        val = prop.collection? ? newval.first : newval
+      if property.dependent? then
+        val = property.collection? ? newval.first : newval
         klass = val.class if val
-        inv_prop = self.class.inverse_property(prop, klass)
+        inv_prop = self.class.inverse_property(property, klass)
         if inv_prop and not inv_prop.collection? then
           owtr = inv_prop.writer
         end
@@ -122,14 +122,14 @@ module Jinx
       # collection value and add each unmatched source to the collection.
       # Otherwise, if the attribute is not yet set and there is a new value, then set it
       # to the new value match or the new value itself if unmatched.
-      if prop.collection? then
+      if property.collection? then
         # TODO - refactor into method
         if oldval.nil? then
-          raise ValidationError.new("Merge into #{qp} #{prop} with nil collection value is not supported")
+          raise ValidationError.new("Merge into #{qp} #{property} with nil collection value is not supported")
         end
         # the references to add
         adds = []
-        logger.debug { "Merging #{newval.qp} into #{qp} #{prop} #{oldval.qp}..." } unless newval.nil_or_empty?
+        logger.debug { "Merging #{newval.qp} into #{qp} #{property} #{oldval.qp}..." } unless newval.nil_or_empty?
         newval.enumerate do |src|
           # If the match target is in the current collection, then update the matched
           # target from the source.
@@ -150,11 +150,11 @@ module Jinx
           end
         end
         # add the unmatched sources
-        logger.debug { "Adding #{qp} #{prop} unmatched #{adds.qp}..." } unless adds.empty?
+        logger.debug { "Adding #{qp} #{property} unmatched #{adds.qp}..." } unless adds.empty?
         adds.each do |ref|
           # If there is an owner writer attribute, then add the ref to the attribute collection by
           # delegating to the owner writer. Otherwise, add the ref to the attribute collection directly.
-          owtr ? delegate_to_inverse_setter(prop, ref, owtr) : oldval << ref
+          owtr ? delegate_to_inverse_setter(property, ref, owtr) : oldval << ref
         end
         oldval
       elsif newval.nil? then
@@ -167,10 +167,10 @@ module Jinx
         # No target; set the attribute to the source.
         # The target is either a source match or the source itself.
         ref = (matches[newval] if matches) || newval
-        logger.debug { "Setting #{qp} #{prop} reference #{ref.qp}..." }
+        logger.debug { "Setting #{qp} #{property} reference #{ref.qp}..." }
         # If the target is a dependent, then set the dependent owner, which will in turn
         # set the attribute to the dependent. Otherwise, set the attribute to the target.
-        owtr ? delegate_to_inverse_setter(prop, ref, owtr) : send(prop.writer, ref)
+        owtr ? delegate_to_inverse_setter(property, ref, owtr) : set_typed_property_value(property, ref)
       end
       newval
     end
