@@ -136,10 +136,13 @@ module Jinx
     #
     # @see Mergeable#merge_attribute
     def set_property_value(attribute, value)
-      # bail out if the value argument is the current value
-      return value if value.equal?(send(attribute))
-      clear_attribute(attribute)
-      merge_attribute(attribute, value)
+      prop = self.class.property(attribute)
+      if prop.domain? and prop.collection? then
+        clear_attribute(attribute)
+        merge_attribute(attribute, value)
+      else
+        set_typed_property_value(prop, value)
+      end
     end
     
     # Returns the first non-nil {#key_value} for the primary, secondary
@@ -695,6 +698,18 @@ module Jinx
       # If there is an owner reference attribute, then there must be an owner.
       if self.class.bidirectional_dependent? then
         raise ValidationError.new("Dependent #{self} does not reference an owner")
+      end
+    end
+       
+    # @param [Property] property the property to set
+    # @param value the new value
+    # @raise [TypeError] if the value is incompatible with the property
+    def set_typed_property_value(property, value)
+      begin
+        send(property.writer, value)
+      rescue TypeError
+        # Add the attribute to the error message.
+        raise TypeError.new("Cannot set #{self.class.qp} #{property} to #{value.qp} - " + $1)
       end
     end
     
