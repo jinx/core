@@ -2,6 +2,7 @@ require 'jinx/helpers/module'
 require 'jinx/import/java'
 require 'jinx/metadata/propertied'
 require 'jinx/metadata/java_property'
+require 'jinx/helpers/math'
 
 module Jinx
   # Meta-data mix-in to infer attribute meta-data from Java properties.
@@ -77,68 +78,71 @@ module Jinx
         return
       end
       # the standard underscore lower-case attributes
-      ja = add_java_property(pd).attribute
+      prop = add_java_property(pd)
       # delegate the standard attribute accessors to the attribute accessors
-      alias_property_accessors(ja, pd.name)
+      alias_property_accessors(prop)
       # add special wrappers
-      wrap_java_property(ja, pd)
+      wrap_java_property(prop)
       # create Ruby alias for boolean, e.g. alias :empty? for :empty
       if pd.property_type.name[/\w+$/].downcase == 'boolean' then
-        # strip leading is_, if any, before appending question mark
-        aliaz = ja.to_s[/^(is_)?(\w+)/, 2] << '?'
-        delegate_to_attribute(aliaz, ja)
+        # Strip the leading is_, if any, before appending a question mark.
+        aliaz = prop.to_s[/^(is_)?(\w+)/, 2] << '?'
+        delegate_to_property(aliaz, prop)
       end
     end
 
-    # Adds a filter to the attribute access method for the property descriptor pd if it is a String or Date.
-    def wrap_java_property(attribute, pd)
+    # Adds a filter to the given property access methods if it is a String or Date.
+    def wrap_java_property(property)
+      pd = property.property_descriptor
       if pd.property_type == Java::JavaLang::String.java_class then
-        wrap_java_string_attribute(attribute, pd)
+        wrap_java_string_property(property)
       elsif pd.property_type == Java::JavaUtil::Date.java_class then
-        wrap_java_date_attribute(attribute, pd)
+        wrap_java_date_property(property)
       end
     end
 
-    # Adds a to_s filter to this Class's String attribute access methods.
-    def wrap_java_string_attribute(attribute, pd)
+    # Adds a number -> string filter to the given String property Ruby access methods.
+    def wrap_java_string_property(property)
+      ra, wa = property.accessors
+      jra, jwa = property.java_accessors
       # filter the attribute writer
-      awtr = "#{attribute}=".to_sym
-      pwtr = pd.write_method.name.to_sym
-      define_method(awtr) do |value|
-        stdval = value.to_s unless value.nil_or_empty?
-        send(pwtr, stdval)
+      define_method(wa) do |value|
+        stdval = Math.numeric?(value) ? value.to_s : value
+        send(jwa, stdval)
       end
-      logger.debug { "Filtered #{qp} #{awtr} method with non-String -> String converter." }
+      logger.debug { "Filtered #{qp} #{wa} method with non-String -> String converter." }
     end
 
-    # Adds a date parser filter to this Class's Date attribute access methods.
-    def wrap_java_date_attribute(attribute, pd)
+    # Adds a Java-Ruby Date filter to the given Date property Ruby access methods.
+    # The reader returns a Ruby date. The writer sets a Java date.
+    def wrap_java_date_property(property)
+      ra, wa = property.accessors
+      jra, jwa = property.java_accessors
+      
       # filter the attribute reader
-      prdr = pd.read_method.name.to_sym
-      define_method(attribute) do
-        value = send(prdr)
+      define_method(ra) do
+        value = send(jra)
         Java::JavaUtil::Date === value ? value.to_ruby_date : value
       end
       
       # filter the attribute writer
-      awtr = "#{attribute}=".to_sym
-      pwtr = pd.write_method.name.to_sym
-      define_method(awtr) do |value|
+      define_method(wa) do |value|
         value = Java::JavaUtil::Date.from_ruby_date(value) if ::Date === value
-        send(pwtr, value)
+        send(jwa, value)
       end
 
-      logger.debug { "Filtered #{qp} #{attribute} and #{awtr} methods with Java Date <-> Ruby Date converter." }
+      logger.debug { "Filtered #{qp} #{ra} and #{wa} methods with Java Date <-> Ruby Date converter." }
     end
 
-    # Aliases the methods _aliaz_ and _aliaz=_ to _attribute_ and _attribute=_, resp.,
-    # where _attribute_ is the Java attribute name for the attribute.
-    def alias_property_accessors(aliaz, attribute)
+    # Aliases the given Ruby property reader and writer to its underlying Java property reader and writer, resp.
+    #
+    # @param [Property] property the property to alias
+    def alias_property_accessors(property)
+      # the Java reader and writer accessor method symbols
+      jra, jwa = property.java_accessors
       # strip the Java reader and writer is/get/set prefix and make a symbol
-      prdr, pwtr = property(attribute).property_accessors
-      alias_method(aliaz, prdr)
-      writer = "#{aliaz}=".to_sym
-      alias_method(writer, pwtr)
+      alias_method(property.reader, jra)
+      alias_method(property.writer, jwa)
     end
 
     # Makes a standard attribute for the given property descriptor.
@@ -154,7 +158,7 @@ module Jinx
       pa = prop.attribute
       # the Java property name as an attribute symbol
       ja = pd.name.to_sym
-      delegate_to_attribute(ja, pa) unless pa == ja
+      delegate_to_property(ja, prop) unless prop.reader == ja
       prop
     end
     
@@ -168,12 +172,12 @@ module Jinx
     # _attribute=_ accessor methods, resp.
     # Calling rather than aliasing the attribute accessor allows the aliaz accessor to
     # reflect a change to the attribute accessor.
-    def delegate_to_attribute(aliaz, attribute)
-      if aliaz == attribute then raise MetadataError.new("Cannot delegate #{self} #{aliaz} to itself.") end
-      rdr, wtr = property(attribute).accessors
-      define_method(aliaz) { send(rdr) }
-      define_method("#{aliaz}=".to_sym) { |value| send(wtr, value) }
-      register_property_alias(aliaz, attribute)
+    def delegate_to_property(aliaz, property)
+      ra, wa = property.accessors
+      if aliaz == ra then raise MetadataError.new("Cannot delegate #{self} #{aliaz} to itself.") end
+      define_method(aliaz) { send(ra) }
+      define_method("#{aliaz}=".to_sym) { |value| send(wa, value) }
+      register_property_alias(aliaz, property.attribute)
     end
   end
 end
