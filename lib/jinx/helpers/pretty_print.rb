@@ -4,7 +4,6 @@ require 'pp'
 require 'stringio'
 require 'jinx/helpers/options'
 require 'jinx/helpers/collections'
-
 require 'jinx/helpers/inflector'
 
 class PrettyPrint
