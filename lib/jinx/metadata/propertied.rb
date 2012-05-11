@@ -15,13 +15,10 @@ module Jinx
 
     # Returns whether this class has an attribute with the given symbol.
     #
-    # @param [Symbol] symbol the potential attribute
+    # @param [String, Symbol] name the potential attribute
     # @return [Boolean] whether there is a corresponding attribute
-    def property_defined?(symbol)
-      unless Symbol === symbol then
-        raise ArgumentError.new("Property argument #{symbol.qp} of type #{symbol.class.qp} is not a symbol")
-      end
-      !!@alias_std_prop_map[symbol.to_sym]
+    def property_defined?(name)
+      !!@alias_std_prop_map[name.to_sym]
     end
 
     # Adds the given attribute to this Class.
@@ -302,7 +299,7 @@ module Jinx
     # @param [Symbol] attribute the attribute to alias
     def alias_attribute(aliaz, attribute)
       if property_defined?(attribute) then
-        delegate_to_attribute(aliaz, attribute)
+        delegate_to_property(aliaz, property(attribute))
         register_property_alias(aliaz, attribute)
       else
         super
@@ -422,7 +419,7 @@ module Jinx
       prop = @local_prop_hash.delete(std_prop)
       if prop then
         # clear the inverse, if any
-        prop.inverse = nil
+        clear_inverse(prop)
         # remove from the mandatory attributes, if necessary
         @local_mndty_flt.delete(std_prop)
         # remove from the attribute => metadata hash

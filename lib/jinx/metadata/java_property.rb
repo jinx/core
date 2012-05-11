@@ -9,7 +9,7 @@ module Jinx
     attr_reader :property_descriptor
 
     # This property's Java property [reader, writer] accessors, e.g. +[:getActivityStatus, :setActivityStatus]+.
-    attr_reader :property_accessors
+    attr_reader :java_accessors
 
     # Creates a Ruby Property symbol corresponding to the given Ruby Java class wrapper klazz
     # and Java property_descriptor.
@@ -49,19 +49,19 @@ module Jinx
       unless declarer.method_defined?(writer) then
         raise ArgumentError.new("Writer method not found for #{declarer} property #{pd.name}")
       end
-      @property_accessors = [reader, writer]
+      @java_accessors = [reader, writer]
       qualify(:collection) if collection_java_class?
       @type = infer_type
     end
     
     # @return [Symbol] the JRuby wrapper method for the Java property reader
-    def property_reader
-      property_accessors.first
+    def java_reader
+      java_accessors.first
     end
     
     # @return [Symbol] the JRuby wrapper method for the Java property writer
-    def property_writer
-      property_accessors.last
+    def java_writer
+      java_accessors.last
     end
 
     # Returns a lower-case, underscore symbol for the given property_name.

@@ -350,11 +350,11 @@ module Jinx
       return unless @inv_prop
       logger.debug { "Clearing #{@declarer.qp}.#{self} inverse #{type.qp}.#{inverse}..." }
       # Capture the inverse before unsetting it.
-      inv_prop = @inv_prop
+      ip = @inv_prop
       # Unset the inverse.
       @inv_prop = nil
       # Clear the inverse of the inverse.
-      inv_prop.inverse = nil
+      ip.inverse = nil
       logger.debug { "Cleared #{@declarer.qp}.#{self} inverse." }
     end
     
