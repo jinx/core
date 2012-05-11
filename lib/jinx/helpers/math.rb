@@ -1,12 +1,21 @@
-# Extends the Numeric class with max and min methods. 
-class Numeric
-  # Returns the minimum of this Numeric and the other Numerics.
-  def min(*others)
-    others.inject(self) { |min, other| other < min ? other : min }
-  end
-
-  # Returns the minimum of this Numeric and the other Numerics.
-  def max(*others)
-    others.inject(self) { |max, other| other > max ? other : max }
+module Jinx
+  module Math
+    # @param [<Numeric>] the numbers to compare
+    # @return [Numeric] the smallest number
+    def self.min(*args)
+      args.inject { |m, n| m < n ? m : n }
+    end
+    
+    # @param [<Numeric>] the numbers to compare
+    # @return [Numeric] the largest number
+    def self.max(*args)
+      args.inject { |m, n| m < n ? n : m }
+    end
+    
+    # @param value the value to check
+    # @return [Boolean] whether the value is a Ruby or Java number
+    def self.numeric?(value)
+      Numeric === value or Java::JavaLang::Number === value
+    end
   end
 end

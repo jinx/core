@@ -28,7 +28,7 @@ module Jinx
       super(opts) do |ref|
         # Collect the path attributes whose type is the ref type up to the
         # next position in the path.
-        max = lineage.size.min(path.size)
+        max = Math.min(lineage.size, path.size)
         pas = (0...max).map { |i| path[i].attribute if path[i].declarer === ref }
         pas.compact!
         ref.class.attribute_filter(pas)
