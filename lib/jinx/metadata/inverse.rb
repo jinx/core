@@ -70,6 +70,22 @@ module Jinx
       end
       logger.debug { "Set #{qp}.#{pa} inverse to #{inverse}." }
     end
+
+    # Clears the property inverse, if there is one.
+    def clear_inverse(property)
+      # the inverse property
+      ip = property.inverse_property || return
+      # If the property is a collection and the inverse is not, then delegate to
+      # the inverse.
+      if property.collection? then
+        return ip.declarer.clear_inverse(ip) unless ip.collection?
+      else
+        # Restore the property reader and writer to the Java reader and writer, resp.
+        alias_property_accessors(property)
+      end
+      # Unset the inverse.
+      property.inverse = nil
+    end
     
     # Detects an unambiguous attribute which refers to the given referencing class.
     # If there is exactly one attribute with the given return type, then that attribute is chosen.
