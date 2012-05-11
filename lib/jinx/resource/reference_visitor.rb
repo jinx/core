@@ -5,7 +5,6 @@ require 'jinx/helpers/collections'
 
 require 'jinx/helpers/validation'
 require 'jinx/helpers/visitor'
-require 'jinx/helpers/math'
 
 module Jinx
   # A ReferenceVisitor traverses reference attributes.
