@@ -3,7 +3,6 @@ require 'test/unit'
 require 'jinx/helpers/collections'
 require 'jinx/helpers/lazy_hash'
 require 'jinx/helpers/case_insensitive_hash'
-require 'jinx/helpers/key_transformer_hash'
 require 'jinx/helpers/conditional_enumerator'
 require 'jinx/helpers/multi_enumerator'
 
@@ -313,7 +312,7 @@ class CollectionsTest < Test::Unit::TestCase
     assert_equal(:a, hash[3], 'Key transformer hash equivalent value not found')
   end
 
-  def test_transformed_hash
+  def test_transform_value
     hash = {:a => 1, :b => 2}
     xfm = hash.transform_value { |v| v * 2 }
     assert_equal(2, xfm[:a], 'Transformed hash accessor incorrect')
@@ -324,6 +323,19 @@ class CollectionsTest < Test::Unit::TestCase
     hash[:b] = 3; hash[:c] = 4
     assert_equal(6, xfm[:b], 'Transformed hash does not reflect base hash change')
     assert_equal(8, xfm[:c], 'Transformed hash does not reflect base hash change')
+  end
+
+  def test_transform_key
+    hash = {'a' => 1, 'b' => 2}
+    xfm = hash.transform_key { |k| k.to_sym }
+    assert_equal(1, xfm[:a], 'Transformed hash accessor incorrect')
+    assert_equal([:a, :b], xfm.keys.sort { |k1, k2| k1.to_s <=> k2.to_s }, 'Transformed hash keys incorrect')
+    assert(xfm.has_key?(:a), 'Transformed hash key query incorrect')
+    assert(!xfm.has_key?('a'), 'Transformed hash key query incorrect')
+    # base hash should be reflected in transformed hash
+    hash['b'] = 3; hash['c'] = 4
+    assert_equal(3, xfm[:b], 'Transformed hash does not reflect base hash change')
+    assert_equal(4, xfm[:c], 'Transformed hash does not reflect base hash change')
   end
 
   def test_hashinator
