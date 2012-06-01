@@ -54,20 +54,13 @@ module Jinx
       return target if source.equal?(target)
       # the domain attributes to merge
       mas = @mergeable.call(source)
-      logger.debug { format_merge_log_message(source, target, mas) }
+      unless mas.empty? then
+        logger.debug { "Merging #{source.qp} #{mas.to_series} into #{target.qp}..." }
+      end
       # merge the non-domain attributes
       target.merge_attributes(source)
       # merge the source domain attributes into the target
       target.merge(source, mas, @matches)
-    end
-    
-    # @param source (see #merge)
-    # @param target (see #merge)
-    # @param attributes (see Mergeable#merge)
-    # @return [String] the log message
-    def format_merge_log_message(source, target, attributes)
-      attr_clause = " including domain attributes #{attributes.to_series}" unless attributes.empty?
-      "Merging #{source.qp} into #{target.qp}#{attr_clause}..."
     end
   end
 end
