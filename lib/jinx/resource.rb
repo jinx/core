@@ -471,7 +471,7 @@ module Jinx
     #
     # @yield [dep] operation on the visited domain object
     # @yieldparam [Resource] dep the domain object to visit 
-    def visit_dependents(&operator) # :yields: dependent
+    def visit_dependents(&operator)
       DEPENDENT_VISITOR.visit(self, &operator)
     end
 
@@ -709,7 +709,7 @@ module Jinx
         send(property.writer, value)
       rescue TypeError
         # Add the attribute to the error message.
-        raise TypeError.new("Cannot set #{self.class.qp} #{property} to #{value.qp} - " + $1)
+        raise TypeError.new("Cannot set #{self.class.qp} #{property} to #{value.qp} - " + $!)
       end
     end
     

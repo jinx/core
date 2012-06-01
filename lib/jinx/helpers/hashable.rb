@@ -465,12 +465,6 @@ module Jinx
       @xfm = transformer
     end
 
-    # @param key the untransformed hash key
-    # @return the value for the transformed key
-    def [](key)
-      @base[@xfm.call(@base[key])]
-    end
-
     # @yield [key, value] operate on the transformed key and value
     # @yieldparam key the transformed hash key
     # @yieldparam value the hash value
