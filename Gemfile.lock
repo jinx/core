@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    jinx (2.1.1)
+    jinx (2.1.2)
       bundler
 
 GEM
