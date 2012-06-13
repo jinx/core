@@ -1,7 +1,7 @@
 This history lists major release themes. See the GitHub commits (https://github.com/jinx/core)
 for change details.
 
-2.1.2 / 2012-04-26
+2.1.2 / 2012-06-12
 ------------------
 * Add content_matches? method.
 
