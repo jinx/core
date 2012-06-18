@@ -22,8 +22,6 @@ class Object
   #       @children = []
   #       parent.children << self if parent
   #     end
-  #
-  #     def to_s;
   #   end
   #   a = Node.new('a'); b = Node.new('b', a), c = Node.new('c', a); d = Node.new('d', c)
   #   a.transitive_closure { |node| node.children }.to_a.join(", ") #=> a, b, c, d
