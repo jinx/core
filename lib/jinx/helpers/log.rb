@@ -66,7 +66,9 @@ module Jinx
     # @option opts [Boolean] :debug whether to include debug messages in the log file
     # @return [MultilineLogger] the global logger
     def open(dev=nil, opts=nil)
-      raise RuntimeError.new("Log already open") if open?
+      if open? then
+        raise RuntimeError.new("The logger has already opened the log#{' file ' + @dev if String === @dev}")
+      end
       dev, opts = nil, dev if Hash === dev
       dev ||= default_log_file(Options.get(:app, opts)) 
       FileUtils.mkdir_p(File.dirname(dev)) if String === dev
