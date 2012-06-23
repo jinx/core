@@ -23,21 +23,19 @@ module Jinx
     # {Propertied#mergeable_attributes}.
     #
     # The merge is performed by calling {#merge_attribute} on each attribute with the matches
-    # and merger block given to this method.
+    # and filter block given to this method.
     #
     # @param [Mergeable, {Symbol => Object}] other the source domain object or value hash to merge from
     # @param [<Symbol>, nil] attributes the attributes to merge (default {Propertied#nondomain_attributes})
     # @param [{Resource => Resource}, nil] the optional merge source => target reference matches
-    # @yield [attribute, oldval, newval] the optional merger block
-    # @yieldparam [Symbol] attribute the merge target attribute
-    # @yieldparam oldval the current merge attribute value
-    # @yieldparam newval the new merge attribute value
+    # @yield [value] the optional filter block
+    # @yieldparam value the source merge attribute value
     # @return [Mergeable] self
     # @raise [ArgumentError] if none of the following are true:
     #   * other is a Hash
     #   * attributes is non-nil
     #   * the other class responds to +mergeable_attributes+
-    def merge_attributes(other, attributes=nil, matches=nil, &merger)
+    def merge_attributes(other, attributes=nil, matches=nil, &filter)
       return self if other.nil? or other.equal?(self)
       attributes = [attributes] if Symbol === attributes
       attributes ||= self.class.mergeable_attributes
@@ -45,11 +43,13 @@ module Jinx
       # if the source object is not a hash, then convert it to an attribute => value hash
       vh = Hashable === other ? other : other.value_hash(attributes)
       # merge the value hash
-      vh.each { |pa, value| merge_attribute(pa, value, matches, &merger) }
+      vh.each { |pa, value| merge_attribute(pa, value, matches, &filter) }
       self
     end
 
-    alias :merge :merge_attributes
+    def merge(*args, &filter)
+      merge_attributes(*args, &filter)
+    end
 
     alias :merge! :merge
     
@@ -77,19 +77,26 @@ module Jinx
     def merge_attribute(attribute, newval, matches=nil)
       # the previous value
       oldval = send(attribute)
-      # If nothing to merge or a block can take over, then bail. 
-      if newval.nil? or mergeable__equal?(oldval, newval) then
-        return oldval
-      elsif block_given? then
-        return yield(attribute, oldval, value)
+      # Filter the newval into the srcval.
+      srcval = if newval and block_given? then
+        if newval.collection? then
+          newval.select { |v| yield(v) }
+        elsif yield(newval) then
+          newval
+        end
+      else
+        newval
       end
+      
+      # If there is no point in merging, then bail. 
+      return oldval if srcval.nil_or_empty? or mergeable__equal?(oldval, newval)
       
       # Discriminate between a domain and non-domain attribute.
       prop = self.class.property(attribute)
       if prop.domain? then
-        merge_domain_property_value(prop, oldval, newval, matches)
+        merge_domain_property_value(prop, oldval, srcval, matches)
       else
-        merge_nondomain_property_value(prop, oldval, newval)
+        merge_nondomain_property_value(prop, oldval, srcval)
       end
     end
 
