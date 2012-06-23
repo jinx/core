@@ -17,9 +17,9 @@ module Jinx
     # Adds an optional {attribute=>value} constructor parameter to this class.
     def add_attribute_value_initializer
       class << self
-        def new(opts=nil)
+        def new(params=nil)
           obj = super()
-          obj.merge_attributes(opts) if opts
+          obj.merge_attributes(params) if params
           obj
         end
       end
