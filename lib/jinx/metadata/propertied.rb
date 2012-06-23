@@ -246,7 +246,7 @@ module Jinx
       @local_prop_hash = {}
       @prop_hash = append_ancestor_enum(@local_prop_hash) { |par| par.property_hash }
       @attributes = Enumerable::Enumerator.new(@prop_hash, :each_key)
-      @local_mndty_flt = Set.new
+      @local_mndty_attrs = Set.new
       @local_defaults = {}
       @defaults = append_ancestor_enum(@local_defaults) { |par| par.defaults }
     end
@@ -393,7 +393,7 @@ module Jinx
 
     # @param [Symbol] attribute the mandatory attribute
     def add_mandatory_attribute(attribute)
-      @local_mndty_flt << standard_attribute(attribute)
+      @local_mndty_attrs << standard_attribute(attribute)
     end
 
     # Marks the given attribute with flags supported by {Property#qualify}.
@@ -414,16 +414,16 @@ module Jinx
     # An attribute declared in a superclass Resource is hidden from this Resource but retained in
     # the declaring Resource.
     def remove_attribute(attribute)
-      std_prop = standard_attribute(attribute)
+      sa = standard_attribute(attribute)
       # if the attribute is local, then delete it, otherwise filter out the superclass attribute
-      prop = @local_prop_hash.delete(std_prop)
-      if prop then
+      sp = @local_prop_hash.delete(sa)
+      if sp then
         # clear the inverse, if any
-        clear_inverse(prop)
+        clear_inverse(sp)
         # remove from the mandatory attributes, if necessary
-        @local_mndty_flt.delete(std_prop)
+        @local_mndty_attrs.delete(sa)
         # remove from the attribute => metadata hash
-        @local_std_prop_hash.delete_if { |aliaz, pa| pa == std_prop }
+        @local_std_prop_hash.delete_if { |aliaz, pa| pa == sa }
       else
         # Filter the superclass hashes.
         anc_prop_hash = @prop_hash.components[1]
@@ -478,8 +478,8 @@ module Jinx
     #
     # @see #mandatory_attributes
     def collect_mandatory_attributes
-      @local_mndty_flt.merge!(default_mandatory_local_attributes)
-      append_ancestor_enum(@local_mndty_flt) { |par| par.mandatory_attributes }
+      @local_mndty_attrs.merge!(default_mandatory_local_attributes)
+      append_ancestor_enum(@local_mndty_attrs) { |par| par.mandatory_attributes }
     end
     
     def default_mandatory_local_attributes
