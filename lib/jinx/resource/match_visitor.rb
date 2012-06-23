@@ -27,8 +27,12 @@ module Jinx
       @copier = opts.delete(:copier)
       # the source => target matches
       @matches = {}
-      # Apply a filter to the selected references so that only a matched reference is visited.
-      opts[:filter] = Proc.new { |src| @matches[src] }
+      # Apply a filter to the visited reference so that only a matched reference is visited.
+      # the reference filter
+      flt = opts[:filter]
+      opts[:filter] = Proc.new do |src|
+        (flt.nil? or flt.call(src)) and !!@matches[src]
+      end
       # the class => {id => target} hash
       @id_mtchs = LazyHash.new { Hash.new }
       # Match the source references before navigating from the source to its references, since

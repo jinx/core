@@ -27,7 +27,8 @@ module Jinx
       JavaProperty === self
     end
 
-    # @return [Boolean] whether the subject attribute returns a domain object or collection of domain objects
+    # @return [Boolean] whether the subject attribute returns a domain object or a collection
+    #   of domain objects
     def domain?
       # the type must be a Ruby class rather than a Java Class, and include the Domain mix-in
       Class === type and type < Resource

@@ -60,7 +60,7 @@ module Jinx
       # merge the non-domain attributes
       target.merge_attributes(source)
       # merge the source domain attributes into the target
-      target.merge(source, mas, @matches)
+      target.merge_attributes(source, mas, @matches, &@filter)
     end
   end
 end
