@@ -193,7 +193,7 @@ module Jinx
     # @return [Visitor] the filter visitor
     # @yield [parent, children] the filter to select which of the children to visit next
     # @yieldparam parent the currently visited node
-    # @yieldparam children the nodes slated by this Visitor to visit next
+    # @yieldparam [Array] children the nodes slated by this visitor to visit next
     # @raise [ArgumentError] if a block is not given to this method
     def filter
       raise ArgumentError.new("A filter block is not given to the visitor filter method") unless block_given?
@@ -229,20 +229,28 @@ module Jinx
     # Visits the root node and all descendants.
     def visit_root(node, &operator)
       clear
-      prune_cycle_nodes(node) if @prune_cycle_flag
-      # visit the root node
-      visit_recursive(node, &operator)
+      # Exclude cycles if the prune cycles flag is set. 
+      @exclude.merge!(cyclic_nodes(node)) if @prune_cycle_flag 
+      # Visit the root node.
+      result = visit_recursive(node, &operator)
+      # Reset the exclusions if the prune cycles flag is set.
+      @exclude.clear if @prune_cycle_flag 
+      result
     end
-  
-    # Excludes the internal nodes in cycles starting and ending at the given root.
-    def prune_cycle_nodes(root)
-      @exclude.clear
-      # visit the root, which will detect cycles, and remove the visited nodes afterwords
-      @prune_cycle_flag = false
-      to_enum(root).collect.each { |node| @visited.delete(node) }
-      @prune_cycle_flag = true
-      # add each cyclic internal node to the exclude list
-      @cycles.each { |cycle| cycle[1...-1].each { |node| @exclude << node } if cycle.first == root }
+    
+    # @example
+    #   visitor.visit(a)
+    #   visit.to_enum #=> [a, b, c, u, v, x, y, z]
+    #   visit.cycles #=> [[a, b, u, x, a], [c, z, c]]
+    #   visit.cyclic_nodes #=> [b, u, x, c, z]
+    # @return [Array] the non-root nodes in visit cycles
+    def cyclic_nodes(root)
+      copts = @options.reject { |k, v| k == :prune_cycle }
+      cycler = Visitor.new(copts, &@navigator)
+      cycler.visit(root)
+      cyclic = cycler.cycles.flatten.uniq
+      cyclic.delete(root)
+      cyclic
     end
   
     def visit_recursive(node, &operator)
@@ -298,7 +306,9 @@ module Jinx
         @visitor = visitor
         @root = node
       end
-  
+      
+      # @yield [node] operates on the visited node
+      # @yieldparam node the visited node 
       def each
         @visitor.visit(@root) { |node| yield(node) }
       end
@@ -314,8 +324,8 @@ module Jinx
   
       # Visits the given pair of nodes.
       #
-      # Raises ArgumentError if nodes does not consist of either two node arguments or one two-item Array
-      # argument.
+      # @param [(Object, Object), <(Object, Object)>] nodes the node pair
+      # @raise [ArgumentError] if the arguments do not consist of either two nodes or one two-item array
       def visit(*nodes)
         if nodes.size == 1 then
           nodes = nodes.first
@@ -324,10 +334,10 @@ module Jinx
         super(nodes)
       end
   
-      # Returns an Enumerable which applies the given block to each matched node starting at the given nodes.
-      #
-      # Raises ArgumentError if nodes does not consist of either two node arguments or one two-item Array
-      # argument.
+      # @param (see #visit)
+      # @param [(Object, Object), <(Object, Object)>] nodes
+      # @return [Enumerable] the result of applying the given block to each matched node starting at the given root nodes
+      # @raise [ArgumentError] if the arguments do not consist of either two nodes or one two-item array
       def to_enum(*nodes)
         if nodes.size == 1 then
           nodes = nodes.first
