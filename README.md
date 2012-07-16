@@ -1,6 +1,5 @@
 JINX: JRuby Java introspector
 =============================
-
 **Home**:         [http://github.com/jinx/core](http://github.com/jinx/core)    
 **Git**:          [http://github.com/jinx/core](http://github.com/jinx/core)       
 **Author**:       OHSU Knight Cancer Institute    
@@ -9,12 +8,10 @@ JINX: JRuby Java introspector
 
 Synopsis
 --------
-
 Jinx introspects a Java application domain package.
 
 Feature List
 ------------
-
 1. Introspects Java properties.
 
 2. Annotates the introspected object model with additional meta-data.
@@ -39,6 +36,5 @@ See the [example](http://github.com/jinx/core/tree/master/examples/family) for a
 
 Copyright
 ---------
-
 Jinx &copy; 2012 by [Oregon Health & Science University](http://www.ohsu.edu/xd/health/services/cancer/index.cfm).
 Jinx is licensed under the MIT license. Please see the LICENSE and LEGAL files for more information.
