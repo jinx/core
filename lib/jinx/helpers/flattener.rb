@@ -4,7 +4,7 @@ module Jinx
     include Collection
 
     # Visits the enumerated items in the given object's flattened content.
-    # block is called on the base itself if the base is neither nil nor a Enumerable.
+    # The given block is called on the base itself if the base is neither nil nor a Enumerable.
     # If the base object is nil or empty, then this method is a no-op and returns nil.
     def self.on(obj, &block)
       obj.collection? ? obj.each { |item| on(item, &block) } : yield(obj) unless obj.nil?
