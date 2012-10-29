@@ -23,6 +23,7 @@ class String
 end
 
 module Jinx
+  # The Collection mix-in designates an application-defined Enumerable class.
   module Collection
     include Enumerable
   end
