@@ -447,16 +447,23 @@ module Jinx
 
     # Marks the given attribute with flags supported by {Property#qualify}.
     #
-    # @param [Symbol] attribute the attribute to qualify
+    # @param [Property] property the property to qualify
     # @param [{Symbol => Object}] the flags to apply to the restricted attribute
-    def qualify_attribute(attribute, *flags)
-      prop = property(attribute)
-      if prop.declarer == self then
-        prop.qualify(*flags)
+    def qualify_property(property, *flags)
+      if property.declarer == self then
+        property.qualify(*flags)
       else
-        logger.debug { "Restricting #{prop.declarer.qp}.#{attribute} to #{qp} with additional flags #{flags.to_series}" }
-        prop.restrict_flags(self, *flags)
+        logger.debug { "Restricting #{property.declarer.qp}.#{property} to #{qp} with additional flags #{flags.to_series}" }
+        property.restrict_flags(self, *flags)
       end
+    end
+
+    # Convenience method which delegates to {#qualify_property}.
+    #
+    # @param [Symbol] attribute the attribute to qualify
+    # @param [{Symbol => Object}] (see #qualify_property)
+    def qualify_attribute(attribute, *flags)
+      qualify_property(property(attribute))
     end
 
     # Removes the given attribute from this Resource.
