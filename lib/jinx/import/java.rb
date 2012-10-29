@@ -201,24 +201,49 @@ module Java
   NAME_SPLITTER_REGEX = /^([\w.]+)\.(\w+)$/
 end
 
-class Class
-  # Returns whether this is a Java wrapper class.
+class Module
+  # Returns whether this is a Ruby wrapper for a Java class or interface.
   def java_class?
-    method_defined?(:java_class)
+    respond_to?(:java_class)
   end
 
-  # Returns the Ruby class for the given class, as follows:
-  # * If the given class is already a Ruby class, then return the class.
-  # * If the class argument is a Java class or a Java class name, then
-  #   the Ruby class is the JRuby wrapper for the Java class.
+  # Returns the Ruby module for the given argument, as follows:
+  # * If the argument is a primitive Java type, then return the corresponding
+  #   JRuby wrapper.
+  # * If the argument is a Ruby module, then return that module.
+  # * If the argument is an unwrapped Java class or interface,
+  #   then return the JRuby wrapper for the class string.
+  # * If the argument is a String, then return the JRuby wrapper for the
+  #   Java class designated by that String.
   #
-  # @param [Class, String] class_or_name the class or class name
-  # @return [Class] the corresponding Ruby class
-  def self.to_ruby(class_or_name)
-    case class_or_name
-      when Class then class_or_name
-      when String then eval to_ruby_name(class_or_name)
-      else to_ruby(class_or_name.name)
+  # @example
+  #   Java.to_ruby(Java::java.lang.Boolean) #=> Java::JavaLang::Boolean
+  #   Java.to_ruby(Java::boolean) #=> Java::JavaLang::Boolean
+  #   Java.to_ruby('boolean') #=> Java::JavaLang::Boolean
+  #
+  # @param [Module, String] mod the Ruby module or unwrapped Java class, interface or name
+  # @return [Module] the corresponding Ruby class
+  def self.to_ruby(mod)
+    if mod.respond_to?(:java_class) then
+      # A primitive Java type has an empty name and non-capitalized java_class name.
+      jname = mod.name.blank? ? mod.java_class.name : mod.name
+      if jname.blank? then
+        raise ArgumentError.new("Cannot convert the anonymous Java class #{mod} to a JRuby class")
+      end
+      if jname =~ /^[a-z]+$/ then
+        # The effective Java type is the Java wrapper class.
+        to_ruby('java.lang.' + jname.capitalize)
+      elsif Module === mod then
+        mod
+      else
+        to_ruby(jname)
+      end
+    elsif Module === mod then
+      mod
+    elsif String === mod then 
+      eval "Java::#{mod}"
+    else
+      raise ArgumentError.new("Cannot convert a #{mod.class} to a JRuby module")
     end
   end
 
@@ -242,7 +267,7 @@ class Class
   # If the hierarchy flag is set to +false+, then only this class's properties
   # will be introspected.
   def property_descriptors(hierarchy=true)
-    return Array::EMPTY_ARRAY  unless java_class?
+    return Array::EMPTY_ARRAY unless java_class?
     info = hierarchy ? Java::JavaBeans::Introspector.getBeanInfo(java_class) : Java::JavaBeans::Introspector.getBeanInfo(java_class, java_class.superclass)
     info.propertyDescriptors.select { |pd| pd.write_method and property_read_method(pd) }
   end
@@ -314,18 +339,6 @@ class Class
   private
   
   OBJ_INST_MTHDS = Object.instance_methods
-  
-  # @param [String] jname the fully-qualified Java class or interface name
-  # @return [String] the JRuby class or module name
-  # @example
-  #   Java.to_ruby_class_name('com.test.Sample') #=> Java::ComTest::Sample
-  def self.to_ruby_name(jname)
-    path = jname.split('.')
-    return "Java::#{jname}" if path.size == 1
-    cname = path[-1]
-    pkg = path[0...-1].map { |s| s.capitalize_first }.join
-    "Java::#{pkg}::#{cname}"
-  end
 end
 
 class Array
