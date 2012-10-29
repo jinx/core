@@ -46,18 +46,10 @@ module Jinx
       @prop_enum ||= enum_for(:each_property)
     end
     
-    # @yield [attribute] the block to apply to the attribute
-    # @yieldparam [Symbol] attribute the attribute to detect
-    # @return [Property] the first attribute metadata whose attribute satisfies the block
-    def detect_property
-      each_pair { |pa, prop| return prop if yield(pa) }
-      nil
-    end
-    
     # @yield [prop] the block to apply to the attribute metadata
     # @yieldparam [Property] prop the attribute metadata
     # @return [Symbol] the first attribute whose metadata satisfies the block
-    def detect_with_property
+    def detect_attribute_with_property
       each_pair { |pa, prop| return pa if yield(prop) }
       nil
     end
@@ -67,7 +59,7 @@ module Jinx
     # @return [AttributeEnumerator] a new eumerator which applies the filter block given to this
     #   method with the Property enumerated by this enumerator
     def compose
-      AttributeEnumerator.new(@hash) { |prop| @filter.call(prop) and yield(prop) }
+      AttributeEnumerator.new(@hash) { |prop| yield(prop) if @filter.call(prop) }
     end
   end
 end
