@@ -10,7 +10,7 @@ module Jinx
     # @return [<Symbol>] this class's attributes
     attr_reader :attributes
     
-    # @return [Hashable] the default attribute => value associations
+    # @return [Hasher] the default attribute => value associations
     attr_reader :defaults
 
     # Returns whether this class has an attribute with the given symbol.
@@ -77,6 +77,11 @@ module Jinx
       @prop_hash.each_value(&block)
     end
 
+    # @return [<Property>] this domain class's properties
+    def properties
+      @props ||= enum_for(:each_property)
+    end
+
     # @param [Symbol] attribute the property attribute symbol or alias
     # @return [Property] the corresponding property
     # @raise [NameError] if the attribute is not recognized
@@ -133,6 +138,11 @@ module Jinx
     def domain_attributes
       @dom_flt ||= attribute_filter { |prop| prop.domain? }
     end
+    
+    # @return [<Property>] the domain properties
+    def domain_properties
+      domain_attributes.properties
+    end
 
     # @return [<Symbol>] the non-domain Java attributes
     def nondomain_attributes
@@ -162,6 +172,12 @@ module Jinx
       else
         @local_dep_flt ||= dependent_attributes.compose { |prop| prop.declarer == self }
       end
+    end
+    
+    # @param (see #dependent_attributes)
+    # @return [<Property>] the dependent properties
+    def dependent_properties(inc_super=true)
+      dependent_attributes(inc_super).properties
     end
     
     # @return [<Symbol>] the unidirectional dependent attributes
@@ -250,7 +266,48 @@ module Jinx
       @local_defaults = {}
       @defaults = append_ancestor_enum(@local_defaults) { |par| par.defaults }
     end
-              
+    
+    # Creates a new convenience property in this source class which composes
+    # the given property and the other property. The new property symbol is
+    # the same as the other property symbol. The new property reader and
+    # writer methods delegate to the respective composed property reader and
+    # writer methods.
+    #
+    # @param [Property] property the reference from the source to the intermediary
+    # @param [Property] other the reference from the intermediary to the target
+    # @yield [target] obtain the intermediary object from the target
+    # @yieldparam [Resource] target the target object
+    # @return [Property] the new property
+    # @raise [ArgumentError] if the other property does not have an inverse
+    def compose_property(property, other)
+      if other.inverse.nil? then
+        raise ArgumentError.new("Can't compose #{qp}.#{property} with inverseless #{other.declarer.qp}.#{other}")
+      end
+      # the source -> intermediary access methods
+      sir, siw = property.accessors
+      # the intermediary -> target access methods
+      itr, itw = other.accessors
+      # the target -> intermediary reader method
+      tir = other.inverse
+      # The reader composes the source -> intermediary -> target readers.
+      define_method(itr) do
+        ref = send(sir)
+        ref.send(itr) if ref
+      end
+      # The writer sets the source intermediary to the target intermediary.
+      define_method(itw) do |tgt|
+        if tgt then
+          ref = block_given? ? yield(tgt) : tgt.send(tir)
+          raise ArgumentError.new("#{tgt} does not reference a #{other.inverse}") if ref.nil?
+        end
+        send(siw, ref)
+      end
+      prop = add_attribute(itr, other.type)
+      logger.debug { "Created #{qp}.#{prop} which composes #{qp}.#{property} and #{other.declarer.qp}.#{other}." }
+      prop.qualify(:collection) if other.collection?
+      prop
+    end
+             
     # @param (see #add_attribute)
     # @return (see #add_attribute) 
     def create_nonjava_property(attribute, type, *flags)
@@ -277,14 +334,6 @@ module Jinx
         logger.debug { "Most specific #{qp} -> #{klass.qp} reference from among #{candidates.qp} is #{best.declarer.qp}.#{best}." }
         best.to_sym
       end
-    end
-    
-    # Detects the first attribute with the given type.
-    #
-    # @param [Class] klass the target attribute type
-    # @return [Symbol, nil] the attribute with the given type
-    def detect_attribute_with_type(klass)
-      property_hash.detect_key_with_value { |prop| prop.type == klass }
     end
     
     # Creates the given attribute alias. If the attribute metadata is registered with this class, then
@@ -431,11 +480,16 @@ module Jinx
         anc_alias_hash = @alias_std_prop_map.components[1]
         @alias_std_prop_map.components[1] = anc_alias_hash.filter_on_key { |pa| pa != attribute }
       end
+      logger.debug { "Removed the #{qp} #{attribute} property." }
     end
 
     # @param [Property] the property to add
     def add_property(property)
       pa = property.attribute
+      # Guard against redundant property
+      if @local_prop_hash.has_key?(pa) then
+        raise ArgumentError.new("#{self} property already exists: #{pa}")
+      end
       @local_prop_hash[pa] = property
       # map the attribute symbol to itself in the alias map
       @local_std_prop_hash[pa] = pa
@@ -451,13 +505,13 @@ module Jinx
     end
 
     # Appends to the given enumerable the result of evaluating the block given to this method
-    # on the superclass, if the superclass is in the same parent module as this class.
+    # on the superclass, if the superclass is also a {Resource} class.
     #
     # @param [Enumerable] enum the base collection
     # @return [Enumerable] the {Enumerable#union} of the base collection with the superclass
     #   collection, if applicable 
     def append_ancestor_enum(enum)
-      return enum unless Class === self and superclass.parent_module == parent_module
+      return enum unless Class === self and superclass < Resource and superclass.introspected?
       anc_enum = yield superclass
       if anc_enum.nil? then
         raise MetadataError.new("#{qp} superclass #{superclass.qp} does not have required metadata")

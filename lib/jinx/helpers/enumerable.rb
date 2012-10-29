@@ -1,5 +1,7 @@
 require 'jinx/helpers/transformer'
+require 'jinx/helpers/flattener'
 require 'jinx/helpers/multi_enumerator'
+require 'jinx/helpers/hasher'
 
 module Enumerable
   # Returns a new Hash generated from this Enumerable and an optional value generator block.
@@ -172,8 +174,9 @@ module Enumerable
   #   ab #=> [1, 2, 3, 4, 5]
   # @param [Enumerable] other the Enumerable to compose with this Enumerable
   # @return [Enumerable] an enumerator over self followed by other
-  def union(other)
-    super rescue Jinx::MultiEnumerator.new(self, other)
+  # @yield (see Jinx::MultiEnumerator#intializer)
+  def union(other, &appender)
+    super rescue Jinx::MultiEnumerator.new(self, other, &appender)
   end
 
   alias :+ :union
@@ -185,14 +188,16 @@ module Enumerable
 
   alias :- :difference
 
-  # @return an Enumerable which iterates over items in this Enumerable which are also in the other Enumerable
+  # @return an Enumerable which iterates over items in this Enumerable which are also in the other
+  #   Enumerable
   def intersect(other)
     filter { |item| other.include?(item) }
   end
 
   alias :& :intersect
 
-  # Returns a new Enumerable that iterates over the base Enumerable applying the transformer block to each item, e.g.:
+  # Returns a new Enumerable that iterates over the base Enumerable applying the transformer block
+  # to each item, e.g.:
   #   [1, 2, 3].transform_value { |n| n * 2 }.to_a #=> [2, 4, 6]
   #
   # Unlike Array.map, {#wrap} reflects changes to the base Enumerable, e.g.:
@@ -201,8 +206,8 @@ module Enumerable
   #   a << 4
   #   transformed.to_a #=> [2, 4, 6, 8]
   #
-  # In addition, transform has a small, fixed storage requirement, making it preferable to select for large collections.
-  # Note, however, that unlike map, transform does not return an Array.
+  # In addition, transform has a small, fixed storage requirement, making it preferable to select
+  # for large collections. Note, however, that unlike map, transform does not return an Array.
   #
   # @yield [item] the transformer on the enumerated items
   # @yieldparam item an enumerated item
@@ -217,20 +222,52 @@ module Enumerable
     to_a.join(sep)
   end
   
-  # Sorts this collection's members with a partial sort operator, i.e. the comparison returns -1, 0, 1 or nil.
-  # The resulting sorted order places each non-nil comparable items in the sort order. The order of nil
-  # comparison items is indeterminate.
+  # Sorts this collection's members with a partial sort operator, i.e. the
+  # comparison returns -1, 0, 1 or nil. The resulting sorted order places
+  # comparable items in their relative sort order. If two items are not
+  # directly comparable, then the relative order of those items is
+  # indeterminate. In all cases the relative order is transitive, i.e.:
+  # * a < b and b < c => a occurs before c in the sort result
+  # * a > b and b > c => a occurs after c in the sort result
   #
   # @example
-  #    [Array, Numeric, Enumerable, Set].partial_sort #=> [Array, Numeric, Set, Enumerable]
-  # @return [Enumerable] the items in this collection in partial sort order
-  def partial_sort
-    unless block_given? then return partial_sort { |item1, item2| item1 <=> item2 } end
-    sort { |item1, item2| yield(item1, item2) or 1 }
+  #    sorted = [Enumerable, Array, String].partial_sort
+  #    sorted.index(Array) < sorted.index(Enumerable) #=> true
+  #    sorted.index(String) < sorted.index(Enumerable) #=> true
+  #
+  # @yield [item1, item2] compare the given enumerated items
+  # @yieldparam item1 an item to compare
+  # @yieldparam item2 another item to compare
+  # @return [Enumerable] a new collection consisting of the items in this collection
+  #   in partial sort order
+  def partial_sort(&block)
+    copy = dup
+    copy.partial_sort!(&block)
+    copy
+  end
+  
+  # Sorts this collection in-place with a partial sort operator.
+  #
+  # @see #partial_sort
+  # @yield (see #partial_sort)
+  # @yieldparam (see #partial_sort)
+  def partial_sort!
+    unless block_given? then return partial_sort! { |item1, item2| item1 <=> item2 } end
+    # The comparison hash
+    h = Hash.new { |h, k| h[k] = Hash.new }
+    sort! do |a, b|
+      # * If a and b are comparable, then use the comparison result.
+      # * Otherwise, if there is a member c such that (a <=> c) == (c <=> b),
+      #   then a <=> b has the transitive comparison result.
+      # * Otherwise, a <=> b is arbitrarily set to 1.
+      yield(a, b) || h[a][b] ||= -h[b][a] ||= h[a].detect_value { |c, v| v if v == yield(c, b) } || 1
+    end
   end
   
   # Sorts this collection's members with a partial sort operator on the results of applying the block.
   #
+  # @yield [item] transform the item to a Comparable value
+  # @yieldparam item an enumerated item
   # @return [Enumerable] the items in this collection in partial sort order
   def partial_sort_by
     partial_sort { |item1, item2| yield(item1) <=> yield(item2) }

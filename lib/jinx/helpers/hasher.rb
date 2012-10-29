@@ -1,11 +1,10 @@
 require 'jinx/helpers/collection'
-require 'jinx/helpers/hashable'
 
 module Jinx
-  # Hashable is a Hash mixin that adds utility methods to a Hash.
-  # Hashable can be included by any class or module which implements an _each_ method
-  # with arguments _key_ and _value_.
-  module Hashable
+  # Hasher is a mix-in that adds utility methods to a Hash.
+  # This Hasher module can be included by any class or module which implements an _each_
+  # method with arguments _key_ and _value_.
+  module Hasher
     include Collection
 
     # @see Hash#each_pair
@@ -13,37 +12,51 @@ module Jinx
       each(&block)
     end
 
-    # @see Hash#[]
-    def [](key)
-      detect_value { |k, v| v if k == key }
-    end
-
     # @see Hash#each_key
     def each_key
       each { |k, v| yield k }
     end
 
-    # @yield [key] the detector block
-    # @yieldparam key the hash key
-    # @return the key for which the detector block returns a non-nil, non-false value,
-    #   or nil if none
     # @example
     #   {1 => :a, 2 => :b, 3 => :c}.detect_key { |k| k > 1 } #=> 2
+    #
+    # @yield [key] the detector block
+    # @yieldparam key the hash key
+    # @return the hash key for which the detector block returns a non-nil, non-false result,
+    #   or nil if none
     def detect_key
       each_key { |k| return k if yield k }
       nil
     end
-    
+
+    # @param key the search target
+    # @return [Boolean] whether this Hasher has the given key
     def has_key?(key)
-      !!detect_key { |k| k == key }
+      each_key { |k| return true if k.eql?(key) }
+      false
     end
 
+    alias :include? :has_key?
+
+    # @see {Enumerable#hash_value}
+    # @example
+    #   {1 => 2, 3 => 4}.detect_value { |k, v| v if k > 1 } #=> 4
+    # @return (see Enumerable#hash_value)
+    def detect_value
+      each do |k, v|
+        value = yield(k, v)
+        return value if value
+      end
+      nil
+    end
+
+    # @example
+    #   {:a => 1, :b => 2, :c => 3}.detect_key_with_value { |v| v > 1 } #=> :b
+    #
     # @yield [value] the detector block
     # @yieldparam value the hash value
     # @return the key for which the detector block returns a non-nil, non-false value,
     #   or nil if none
-    # @example
-    #   {:a => 1, :b => 2, :c => 3}.detect_key_with_value { |v| v > 1 } #=> :b
     def detect_key_with_value
       each { |k, v| return k if yield v }
       nil
@@ -53,9 +66,26 @@ module Jinx
     def each_value
       each { |k, v| yield v }
     end
+
+    # @example
+    #   {:a => 1, :b => 2}.detect_hash_value { |v| v > 1 } #=> 2
+    #
+    # @yield [value] the detector block
+    # @yieldparam value the hash value
+    # @return a hash value for which the detector block returns a non-nil, non-false result,
+    #   or nil if none
+    def detect_hash_value
+      each_value { |v| return v if yield v }
+      nil
+    end
+
+    # @see Hash#[]
+    def [](key)
+      detect_value { |k, v| v if k.eql?(key) }
+    end
     
-    # Returns a Hashable which composes each value in this Hashable with the key of
-    # the other Hashable, e.g.:
+    # Returns a Hasher which composes each value in this Hasher with the key of the
+    # other Hasher, e.g.:
     #   x = {:a => :c, :b => :d}
     #   y = {:c => 1}
     #   z = x.compose(y)
@@ -68,14 +98,14 @@ module Jinx
     #
     # Update operations on the result are not supported.
     #
-    # @param [Hashable] other the Hashable to compose with this Hashable
-    # @return [Hashable] the composed result
+    # @param [Hasher] other the Hasher to compose with this Hasher
+    # @return [Hasher] the composed result
     def compose(other)
       transform_value { |v| {v => other[v]} if other.has_key?(v) }
     end
 
-    # Returns a Hashable which joins each value in this Hashable with the key of
-    # the other Hashable, e.g.:
+    # Returns a Hasher which joins each value in this Hasher with the key of the
+    # other Hasher, e.g.:
     #   x = {:a => :c, :b => :d}
     #   y = {:c => 1}
     #   z = x.join(y)
@@ -88,14 +118,14 @@ module Jinx
     #
     # Update operations on the result are not supported.
     #
-    # @param [Hashable] other the Hashable to join with this Hashable
-    # @return [Hashable] the joined result
+    # @param [Hasher] other the Hasher to join with this Hasher
+    # @return [Hasher] the joined result
     def join(other)
       transform_value { |v| other[v] }
     end
 
-    # Returns a Hashable which associates each key of both this Hashable and the other Hashable
-    # with the corresponding value in the first Hashable which has that key, e.g.:
+    # Returns a Hasher which associates each key of both this Hasher and the other
+    # Hasher with the corresponding value in the first Hasher which has that key, e.g.:
     #   x = {:a => 1, :b => 2}
     #   y = {:b => 3, :c => 4}
     #   z = x + y
@@ -107,23 +137,23 @@ module Jinx
     #
     # Update operations on the result are not supported.
     #
-    # @param [Hashable] other the Hashable to form a union with this Hashable
-    # @return [Hashable] the union result
+    # @param [Hasher] other the Hasher to form a union with this Hasher
+    # @return [Hasher] the union result
     def union(other)
       MultiHash.new(self, other)
     end
 
     alias :+ :union
 
-    # Returns a new Hashable that iterates over the base Hashable <key, value> pairs for which the block
-    # given to this method evaluates to a non-nil, non-false value, e.g.:
+    # Returns a new Hasher that iterates over the base Hasher <key, value> pairs for which
+    # the block given to this method evaluates to a non-nil, non-false value, e.g.:
     #   {:a => 1, :b => 2, :c => 3}.filter { |k, v| k != :b }.to_hash #=> {:a => 1, :c => 3}
     #
     # The default filter block tests the value, e.g.:
     #   {:a => 1, :b => nil}.filter.to_hash #=> {:a => 1}
     #
     # @yield [key, value] the filter block
-    # @return [Hashable] the filtered result
+    # @return [Hasher] the filtered result
     def filter(&block)
       Filter.new(self, &block)
     end
@@ -135,25 +165,25 @@ module Jinx
     #
     # @yield [key] the filter block
     # @yieldparam key the hash key to filter
-    # @return [Hashable] the filtered result
+    # @return [Hasher] the filtered result
     def filter_on_key(&block)
       KeyFilter.new(self, &block)
     end
 
-    # @return [Hashable] a {#filter} that only uses the value.
+    # @return [Hasher] a {#filter} that only uses the value.
     # @yield [value] the filter block
     # @yieldparam value the hash value to filter
-    # @return [Hashable] the filtered result
+    # @return [Hasher] the filtered result
     def filter_on_value
       filter { |k, v| yield v }
     end
 
-    # @return [Hash] a {#filter} of this Hashable which excludes the entries with a null value
+    # @return [Hash] a {#filter} of this Hasher which excludes the entries with a null value
     def compact
       filter_on_value { |v| not v.nil? }
     end
 
-    # Returns the difference between this Hashable and the other Hashable in a Hash of the form:
+    # Returns the difference between this Hasher and the other Hasher in a Hash of the form:
     #
     # _key_ => [_mine_, _theirs_]
     #
@@ -162,22 +192,24 @@ module Jinx
     # * _mine_ is the value for _key_ in this hash 
     # * _theirs_ is the value for _key_ in the other hash 
     #
-    # @param [Hashable] other the Hashable to subtract
+    # @param [Hasher] other the Hasher to subtract
     # @yield [key, v1, v2] the optional block which determines whether values differ (default is equality)
     # @yieldparam key the key for which values are compared
-    # @yieldparam v1 the value for key from this Hashable
-    # @yieldparam v2 the value for key from the other Hashable
+    # @yieldparam v1 the value for key from this Hasher
+    # @yieldparam v2 the value for key from the other Hasher
     # @return [{Object => (Object,Object)}] a hash of the differences
-    def diff(other)
+    def difference(other)
       (keys.to_set + other.keys).to_compact_hash do |k|
          mine = self[k]
          yours = other[k]
          [mine, yours] unless block_given? ? yield(k, mine, yours) : mine == yours
       end
     end
+    
+    alias :diff :difference
 
     # @yield [key1, key2] the key sort block
-    # @return [Hashable] a hash whose #each and {#each_pair} enumerations are sorted by key
+    # @return [Hasher] a hash whose #each and {#each_pair} enumerations are sorted by key
     def sort(&sorter)
       SortedHash.new(self, &sorter)
     end
@@ -188,7 +220,7 @@ module Jinx
     #   {:a => 1, :b => 2}.assoc_values({:a => 3, :c => 4}) #=> {:a => [1, 3], :b => [2, nil], :c => [nil, 4]}
     #   {:a => 1, :b => 2}.assoc_values({:a => 3}, {:a => 4, :b => 5}) #=> {:a => [1, 3, 4], :b => [2, nil, 5]}
     #
-    # @param [<Hashable>] others the other Hashables to associate with this Hashable
+    # @param [<Hasher>] others the other Hashers to associate with this Hasher
     # @return [Hash] the association hash
     def assoc_values(*others)
       all_keys = keys
@@ -209,25 +241,17 @@ module Jinx
       filter_on_value(&filter).keys
     end
 
-    # @return [Enumerable] Enumerable over this Hashable's keys
+    # @return [Enumerable] Enumerable over this Hasher's keys
     def enum_keys
       Enumerable::Enumerator.new(self, :each_key)
     end
 
-    # @return [Array] this Hashable's keys
+    # @return [Array] this Hasher's keys
     def keys
       enum_keys.to_a
     end
 
-    # @param key search target
-    # @return [Boolean] whether this Hashable has the given key
-    def has_key?(key)
-      enum_keys.include?(key)
-    end
-
-    alias :include? :has_key?
-
-    # @return [Enumerable] an Enumerable over this Hashable's values
+    # @return [Enumerable] an Enumerable over this Hasher's values
     def enum_values
       Enumerable::Enumerator.new(self, :each_value)
     end
@@ -262,7 +286,7 @@ module Jinx
     end
 
     # @param value search target
-    # @return [Boolean] whether this Hashable has the given value
+    # @return [Boolean] whether this Hasher has the given value
     def has_value?(value)
       enum_values.include?(value)
     end
@@ -288,7 +312,7 @@ module Jinx
     #
     # This method is useful for preserving and restoring hash associations.
     #
-    # @return [Hash] a deep copy of this Hashable 
+    # @return [Hash] a deep copy of this Hasher 
     def copy_recursive
       copy = Hash.new
       keys.each do |k|
@@ -298,27 +322,46 @@ module Jinx
       copy
     end
 
+    # Returns a new Hasher which applies a transformer block to each value in this
+    # base Hasher. The result reflects changes to this underlying base Hasher.
+    #
     # @example
-    #   {:a => 1, :b => 2}.transform_value { |n| n * 2 }.values #=> [2, 4] 
+    #   h = {:a => 1, :b => 2}
+    #   xfm = h.transform_value { |n| n * 2 }
+    #   xfm.values #=> [2, 4]
+    #   xfm[:a] #=> 2
+    #   xfm[:b] #=> 4
+    #   h[:c] = 3
+    #   xfm[:c] #=> 6
     #                                           
     # @yield [value] transforms the given value
-    # @yieldparam [value] the value to transform 
-    # @return [Hash] a new Hash that transforms each value
+    # @yieldparam value the value to transform 
+    # @return [Hasher] a new Hasher that transforms each value
     def transform_value(&transformer)
       ValueTransformerHash.new(self, &transformer)
     end
 
+    # Returns a new Hasher which applies a transformer block to each key in this
+    # base Hasher. The result reflects changes to this underlying base Hasher.
+    #
     # @example
-    #   {1 => :a, 2 => :b}.transform_key { |n| n * 2 }.keys #=> [2, 4]
+    #   h = {1 => :a, 2 => :b}
+    #   xfm = h.transform_key { |n| n * 2 }
+    #   xfm.keys #=> [2, 4]
+    #   xfm[2] #=> :a
+    #   xfm[3] #=> nil
+    #   xfm[4] #=> :b
+    #   h[3] = :c
+    #   xfm[6] #=> :c
     #                                           
     # @yield [key] transforms the given key
-    # @yieldparam [value] the key to transform 
-    # @return [Hash] a new Hash that transforms each key
+    # @yieldparam key the key to transform 
+    # @return [Hasher] a new Hasher that transforms each key
     def transform_key(&transformer)
       KeyTransformerHash.new(self, &transformer)
     end
     
-    # @return [Hash] a new Hash created from this Hashable's content
+    # @return [Hash] a new Hash created from this Hasher's content
     def to_hash
       hash = {}
       each { |k, v| hash[k] = v }
@@ -345,7 +388,7 @@ module Jinx
 
     # @see #filter
     class Filter
-      include Hashable
+      include Hasher
 
       def initialize(base, &filter)
         @base = base
@@ -359,7 +402,7 @@ module Jinx
 
     # @see #filter_on_key
     class KeyFilter < Filter
-      include Hashable
+      include Hasher
 
       def initialize(base)
         super(base) { |k, v| yield(k) }
@@ -372,7 +415,7 @@ module Jinx
 
     # @see #sort
     class SortedHash
-      include Hashable
+      include Hasher
 
       def initialize(base, &comparator)
         @base = base
@@ -384,11 +427,11 @@ module Jinx
       end
     end
 
-    # Combines hashes. See Hash#+ for details.
+    # Combines hashes. See {Hasher#union} for details.
     class MultiHash
-      include Hashable
+      include Hasher
 
-      # @return [<Hashable>] the enumerated hashes
+      # @return [<Hasher>] the enumerated hashes
       attr_reader :components
 
       def initialize(*hashes)
@@ -417,13 +460,18 @@ module Jinx
         end
         self
       end
+      
+      # Returns the union of the results of calling the given method symbol on each component.
+      def method_missing(symbol, *args)
+        @components.map { |hash| hash.send(symbol, *args) }.inject { |value, result| result.union(value) }
+      end
     end
   end
   
-  # The ValueTransformerHash class pipes the value from a base Hashable into a transformer block.
+  # The ValueTransformerHash class pipes the value from a base Hasher into a transformer block.
   # @private
   class ValueTransformerHash
-    include Hashable
+    include Hasher
 
     # Creates a ValueTransformerHash on the base hash and value transformer block.
     #
@@ -450,14 +498,14 @@ module Jinx
     end
   end
   
-  # The KeyTransformerHash class pipes the key from a base Hashable into a transformer block.
+  # The KeyTransformerHash class applies a transformer block to each key in a base Hasher.
   # @private
   class KeyTransformerHash
-    include Hashable
+    include Hasher
 
     # Creates a KeyTransformerHash on the base hash and key transformer block.
     #
-    # @param [Hash, nil] base the hash to transform
+    # @param [Hash] base the hash to transform
     # @yield [key] transforms the base key
     # @yieldparam key the base key to transform
     def initialize(base, &transformer)
@@ -473,7 +521,7 @@ module Jinx
     end
   end
   
-  # Hashinator creates a Hashable from an Enumerable on [_key_, _value_] pairs.
+  # Hashinator creates a Hasher from an Enumerable on [_key_, _value_] pairs.
   # The Hashinator reflects changes to the underlying Enumerable.
   #
   # @example
@@ -483,7 +531,7 @@ module Jinx
   #   base.first[1] = 3
   #   hash[:a] #=> 3
   class Hashinator
-    include Hashable
+    include Hasher
 
     def initialize(enum)
       @base = enum

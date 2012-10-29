@@ -1,7 +1,7 @@
-require 'jinx/helpers/hashable'
+require 'jinx/helpers/hasher'
 
 class Hash
-  include Jinx::Hashable
+  include Jinx::Hasher
 
   # The EMPTY_HASH constant is an immutable empty hash, used primarily as a default argument.
   class << EMPTY_HASH ||= Hash.new
@@ -10,3 +10,4 @@ class Hash
     end
   end
 end
+
