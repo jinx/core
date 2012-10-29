@@ -222,8 +222,8 @@ module Enumerable
     to_a.join(sep)
   end
   
-  # Sorts this collection's members with a partial sort operator, i.e. the
-  # comparison returns -1, 0, 1 or nil. The resulting sorted order places
+  # Sorts this collection's members with a partial comparator block. A partial
+  # comparator block  returns -1, 0, 1 or nil. The resulting sorted order places
   # comparable items in their relative sort order. If two items are not
   # directly comparable, then the relative order of those items is
   # indeterminate. In all cases the relative order is transitive, i.e.:
@@ -235,22 +235,23 @@ module Enumerable
   #    sorted.index(Array) < sorted.index(Enumerable) #=> true
   #    sorted.index(String) < sorted.index(Enumerable) #=> true
   #
-  # @yield [item1, item2] compare the given enumerated items
+  # @yield [item1, item2] the partial comparison result (-1, 0, 1 or nil)
   # @yieldparam item1 an item to compare
   # @yieldparam item2 another item to compare
   # @return [Enumerable] a new collection consisting of the items in this collection
   #   in partial sort order
   def partial_sort(&block)
-    copy = dup
+    copy = dup.to_a
     copy.partial_sort!(&block)
     copy
   end
   
-  # Sorts this collection in-place with a partial sort operator.
+  # Sorts this collection in-place with a partial sort operator block
   #
   # @see #partial_sort
   # @yield (see #partial_sort)
   # @yieldparam (see #partial_sort)
+  # @raise [NoMethodError] if this Enumerable does not support the +sort!+ sort in-place method 
   def partial_sort!
     unless block_given? then return partial_sort! { |item1, item2| item1 <=> item2 } end
     # The comparison hash
