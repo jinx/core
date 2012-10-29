@@ -463,7 +463,7 @@ module Jinx
     # @param [Symbol] attribute the attribute to qualify
     # @param [{Symbol => Object}] (see #qualify_property)
     def qualify_attribute(attribute, *flags)
-      qualify_property(property(attribute))
+      qualify_property(property(attribute), *flags)
     end
 
     # Removes the given attribute from this Resource.
