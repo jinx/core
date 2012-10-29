@@ -149,7 +149,6 @@ module Jinx
       # add residual matches
       rsd_mtchs.each { |src, tgt| add_match(src, tgt) }
       logger.debug { "#{qp} matched #{rsd_mtchs.qp}..." } if @verbose and not rsd_mtchs.empty?
-      
       # The source => target match hash.
       # If there is a copier, then copy each unmatched source.
       matches = srcs.to_compact_hash { |src| match_for(src) or copy_unmatched(src) }

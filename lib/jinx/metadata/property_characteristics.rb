@@ -30,8 +30,8 @@ module Jinx
     # @return [Boolean] whether the subject attribute returns a domain object or a collection
     #   of domain objects
     def domain?
-      # the type must be a Ruby class rather than a Java Class, and include the Domain mix-in
-      Class === type and type < Resource
+      # the type must be a Ruby class that extends the {Metadata} mix-in
+      Class === type and type < Resource and type.introspected?
     end
 
     # @return [Boolean] whether the subject attribute is not a domain object attribute
