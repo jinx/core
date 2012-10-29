@@ -56,26 +56,15 @@ module Jinx
   #   Jinx::Visitor.new { |node| node.children }.to_enum(parent).detect { |node| node.value == 2 }
   class Visitor
   
-    attr_reader :options, :visited, :lineage, :cycles
+    attr_reader :options, :visited, :lineage
   
     # Creates a new Visitor which traverses the child objects returned by the navigator block.
     # The navigator block takes a parent node argument and returns an enumerator on the children
-    # to visit.
+    # to visit. The options argument is described in {Options.get}.
     #
-    # The options is a _symbol_, _symbol_ => _value_ hash or nil. A _symbol_ argument is the same
-    # as +{+_symbol_ +=> true}+. Supported options include the following:
-    # * +:depth_first+: +true+, +false+ or a Proc. If the value is a Proc, then
-    #   value determines whether a child is visited depth-first. See the {#visit} method for more
-    #   information.
-    #
-    # If the :operator option is set, then the visit operator block is called when a node is visited.
-    # The operator block argument is the visited node.
-    #
-    # @param [Symbol, {Symbol => Object}] opts the visit options. A symbol argument is the same
-    #   as symbol => true
-    # @option opts [String] :depth_first depth-first traversal
-    # @option opts [Proc] :operator the operator applied to each visited node
-    # @option opts [String] :prune_cycle flag indicating whether to exclude cycles to the root in a visit
+    # @param [Symbol, {Symbol => Object}] opts the visit options
+    # @option opts [Boolean] :depth_first depth-first traversal
+    # @option opts [Boolean] :prune_cycle flag indicating whether to exclude cycles in a visit
     # @option opts [Boolean] :verbose print navigation log messages
     # @yield [parent] returns an enumerator on the children to visit
     # @yieldparam parent the current node
@@ -86,7 +75,6 @@ module Jinx
       @depth_first_flag = @options[:depth_first]
       @prune_cycle_flag = @options[:prune_cycle]
       @lineage = []
-      @cycles = []
       @visited = {}
       @verbose = Options.get(:verbose, opts, false)
       @exclude = Set.new
@@ -197,7 +185,7 @@ module Jinx
     # @raise [ArgumentError] if a block is not given to this method
     def filter
       raise ArgumentError.new("A filter block is not given to the visitor filter method") unless block_given?
-      Visitor.new(@options) { |node| yield(node, node_children(node)) }
+      self.class.new(@options) { |node| yield(node, node_children(node)) }
     end
   
     protected
@@ -208,8 +196,6 @@ module Jinx
       @lineage.clear
       # if the visited hash is not shared, then clear it
       @visited.clear unless @options.has_key?(:visited)
-      # clear the cycles
-      @cycles.clear
     end
   
     # Returns the children to visit for the given node.
@@ -238,37 +224,42 @@ module Jinx
       result
     end
     
+    # Returns the nodes which occur within a cycle, excluding the cycle entry point.
+    #
     # @example
-    #   visitor.visit(a)
-    #   visit.to_enum #=> [a, b, c, u, v, x, y, z]
-    #   visit.cycles #=> [[a, b, u, x, a], [c, z, c]]
-    #   visit.cyclic_nodes #=> [b, u, x, c, z]
-    # @return [Array] the non-root nodes in visit cycles
+    #   graph.paths #=> a -> b -> a, a -> c -> d -> c
+    #   Visitor.new(graph, &navigator).cyclic_nodes(a) #=> [b, d]
+    # @param root the node to visit
+    # @return [Array] the nodes within visit cycles
     def cyclic_nodes(root)
       copts = @options.reject { |k, v| k == :prune_cycle }
-      cycler = Visitor.new(copts, &@navigator)
+      cyclic = Set.new
+      cycler = Visitor.new(copts) do |parent|
+        children = @navigator.call(parent)
+        # Look for a cycle back to the child.
+        children.each do |child|
+          index = cycler.lineage.index(child)
+          if index then
+            # The child is also a parent: add the nodes between
+            # the two occurrences of the child in the lineage.
+            cyclic.merge!(cycler.lineage[(index + 1)..-1])
+          end
+        end
+        children
+      end
       cycler.visit(root)
-      cyclic = cycler.cycles.flatten.uniq
-      cyclic.delete(root)
       cyclic
-    end
+    end    
   
     def visit_recursive(node, &operator)
-      # bail if no node or the node is specifically excluded
+      # Bail if no node or the node is specifically excluded.
       return if node.nil? or @exclude.include?(node)
-      # return the visited value if the node has already been visited
-      if @visited.has_key?(node) then
-        #capture a cycle
-        index = @lineage.index(node)
-        if index then
-          cycle = @lineage[index..-1] << node
-          @cycles << cycle
-        end
-        return @visited[node]
-      end
-      # return nil if the node has not been visited but has been navigated in a depth-first visit
+      # Return the visited value if the node has already been visited.
+      return @visited[node] if @visited.has_key?(node)
+      # Return nil if the node has not been visited but has been navigated in a
+      # depth-first visit.
       return if @lineage.include?(node)
-      # all systems go: visit the node graph
+      # All systems go: visit the node subgraph.
       visit_node_and_children(node, &operator)
     end
   
