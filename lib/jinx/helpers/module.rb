@@ -13,6 +13,6 @@ class Module
   #   A::B.parent_module #=> A
   # @return [Module] this module's definition context
   def parent_module
-    Kernel.module_with_name(name.split('::')[0..-2].join('::'))
+    module_with_name(name.split('::')[0..-2].join('::'))
   end
 end

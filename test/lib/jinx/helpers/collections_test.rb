@@ -66,6 +66,10 @@ class CollectionsTest < Test::Unit::TestCase
    assert_nil([1, 2, 3].detect_value { |item| item * 2 if item > 3 }, "Value incorrectly detected")
   end
 
+  def test_hash_detect_value
+   assert_equal(4, {1 => 2, 3 => 4}.detect_value { |k, v| v if k > 1 }, "Detect hash value incorrect")
+  end
+
   def test_detect_with_value
     assert_equal([2, 1], [1, 2].detect_with_value { |item| item / 2 if item % 2 == 0 }, "Detect with value incorrect")
   end
@@ -96,12 +100,15 @@ class CollectionsTest < Test::Unit::TestCase
 
   def test_union
     base = [1, 2]
-    sum = base.union([4])
-    assert_equal([1, 2, 4], sum.to_a, 'Enumerator union incorrect')
-    assert(sum.include?(2), "Enumerator union missing first array element")
-    assert(sum.include?(4), "Enumerator union missing second array element")
+    u = base.union([4])
+    assert_equal([1, 2, 4], u.to_a, 'Enumerator on union incorrect')
+    assert(u.include?(2), "Enumerator on union missing first array element")
+    assert(u.include?(4), "Enumerator on union missing second array element")
     base << 3
-    assert_equal([1, 2, 3, 4], sum.to_a, 'Enumerator union does not reflect operand modification')
+    assert_equal([1, 2, 3, 4], u.to_a, 'Enumerator on union does not reflect operand modification')
+    # A union of a unions yields the flattened result.
+    uu = u.union([5])
+    assert_equal([1, 2, 3, 4, 5], uu.to_a, 'Enumerator on union of unions incorrect')
   end
 
   def test_intersection
@@ -137,9 +144,16 @@ class CollectionsTest < Test::Unit::TestCase
   end
   
   def test_partial_sort
-    sorted = [Array, Object, Numeric, Enumerable, Set].partial_sort
+    sorted = [Enumerable, Array, Object, String].partial_sort
     assert(sorted.index(Array) < sorted.index(Enumerable), "Partial sort order incorrect")
-    assert(sorted.index(Set) < sorted.index(Enumerable), "Partial sort order incorrect")
+    assert(sorted.index(Array) < sorted.index(Object), "Partial sort order incorrect")
+    assert(sorted.index(String) < sorted.index(Enumerable), "Partial sort order incorrect")
+    assert(sorted.index(String) < sorted.index(Object), "Partial sort order incorrect")
+  end
+  
+  def test_partial_sort_with_block
+    sorted = [Array, Module, Enumerable].partial_sort { |a, b| b <=> a }
+    assert(sorted.index(Array) > sorted.index(Enumerable), "Partial sort order incorrect")
   end
 
   def test_hash_union
@@ -182,7 +196,7 @@ class CollectionsTest < Test::Unit::TestCase
     assert_equal(expected, actual, 'Association hash incorrect')
   end
 
-  def test_hashable_equal
+  def test_hasher_equal
     assert_equal({:a => 1}, {:a => 1}.filter, "Hash equal incorrect")
   end
 
@@ -305,11 +319,12 @@ class CollectionsTest < Test::Unit::TestCase
   end
 
   def test_key_transformer_hash
-    hash = Jinx::KeyTransformerHash.new { |k| k % 2 }
-    hash[1] = :a
-    assert_equal(:a, hash[1], 'Key transformer hash entered value not found')
-    assert_nil(hash[2], 'Transformed hash unentered value found')
-    assert_equal(:a, hash[3], 'Key transformer hash equivalent value not found')
+    h = {1 => :a, 2 => :b}
+    xfm = h.transform_key { |n| n * 2 }
+    assert_equal([2, 4], xfm.keys, 'Key transformer hash keys incorrect') 
+    assert_equal(:a, xfm[2], 'Key transformer hash access incorrect') 
+    h[3] = :c
+    assert_equal(:c, xfm[6], 'Key transformer hash does not reflect change to underlying hash')
   end
 
   def test_transform_value
@@ -347,7 +362,7 @@ class CollectionsTest < Test::Unit::TestCase
     assert_nil(hash[:c], "Hashinator has association not in the base")
     base.first[1] = 3
     assert_equal(3, hash[:a], "Hashinator does not reflect change to underlying Enumerator")
-    assert_equal(base, hash.to_hash.to_a, "Hashable to_hash incorrect")
+    assert_equal(base, hash.to_hash.to_a, "Hasher to_hash incorrect")
   end
 
   def test_collector

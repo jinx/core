@@ -83,21 +83,6 @@ class VistorTest < Test::Unit::TestCase
     assert_equal(3, child.value, "Child visited twice")
   end
 
-  def test_root_cycle
-    parent = Node.new(1)
-    c1 = Node.new(2, parent)
-    c2 = Node.new(3, parent)
-    c2.children << parent
-    gc11 = Node.new(4, c1)
-    gc12 = Node.new(5, c1)
-    gc12.children << c1
-    gc121 = Node.new(6, gc12)
-    gc121.children << parent
-    visitor = Jinx::Visitor.new { |node| node.children }
-    result = visitor.visit(parent)
-    assert_equal([[2, 5, 2], [1, 2, 5, 6, 1], [1, 3, 1]], visitor.cycles.map { |cycle| cycle.map { |node| node.value } }, "Root cycles incorrect")
-  end
-
   def increment(parent, limit)
     visitor = Jinx::Visitor.new { |node| node.children }
     visitor.visit(parent) { |node| node.value < limit ? node.value += 1 : return }
@@ -122,11 +107,13 @@ class VistorTest < Test::Unit::TestCase
     c1 = Node.new(2, parent)
     c2 = Node.new(3, parent)
     visitor = Jinx::Visitor.new { |node| node.children }
-    result = visitor.to_enum(parent).map { |node| node.value }
-    assert_equal([1, 2, 3], result, "Enumeration result incorrect")
+    result = visitor.to_enum(parent).to_a
+    assert_equal([parent, c1, c2], result, "Enumeration result incorrect")
   end
 
-  def test_exclude_cycles
+  def test_prune_cycle
+    # Make a graph with paths parent -> c1 -> gc11 -> c1 and
+    # parent -> c2 -> gc21 -> parent.
     parent = Node.new(1)
     c1 = Node.new(2, parent)
     gc11 = Node.new(3, c1)
@@ -135,8 +122,8 @@ class VistorTest < Test::Unit::TestCase
     gc21 = Node.new(5, c2)
     gc21.children << parent
     visitor = Jinx::Visitor.new(:prune_cycle) { |node| node.children }
-    result = visitor.to_enum(parent).map { |node| node.value }
-    assert_equal([1, 2, 3], result, "Exclude result incorrect")
+    result = visitor.to_enum(parent).to_a
+    assert_equal([parent, c1], result, "Exclude result incorrect")
   end
 
   def test_missing_block

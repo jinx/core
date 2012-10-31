@@ -95,7 +95,7 @@ class Class
     attr_writer(symbol)
     wtr = "#{symbol}=".to_sym
     iv = "@#{symbol}".to_sym
-    # the attribute reader creates a new proxy on demand
+    # the attribute reader creates a new value on demand
     define_method(symbol) do
       instance_variable_defined?(iv) ? instance_variable_get(iv) : send(wtr, yield(self))
     end
@@ -123,10 +123,12 @@ class Class
   # @yieldparam old_method [Symbol] the method being redefined
   # @return [Symbol] an alias to the old method implementation
   def redefine_method(method)
-    # make a new alias id method__base for the existing method.
-    # disambiguate with a counter suffix if necessary.
+    # Make a new alias id method__base for the existing method.
+    # Disambiguate with a counter suffix if necessary.
     counter = 2
-    # make a valid alias base
+    # Make a valid alias base. The base includes this class's object id in order
+    # to ensure uniqueness within the class hierarchy. This alias uniqueness
+    # guards against a superclass occluding a subclass redefinition.
     old, eq = /^([^=]*)(=)?$/.match(method.to_s).captures
     old.tr!('|', 'or')
     old.tr!('&', 'and')
@@ -134,16 +136,18 @@ class Class
     old.tr!('*', 'mult')
     old.tr!('/', 'div')
     old.gsub!(/[^\w]/, 'op')
-    base = "redefined__#{old}"
-    old_id = "#{base}#{eq}".to_sym
-    while method_defined?(old_id)
-      base = "#{base}#{counter}"
-      old_id = "#{base}#{eq}".to_sym
+    base = "redefined__#{object_id}_#{old}"
+    # Make a unique method alias for the old method.
+    old_sym = "#{base}#{eq}".to_sym
+    while method_defined?(old_sym)
+      old_sym = "#{base}#{counter}#{eq}".to_sym
       counter = counter + 1
     end
-    alias_method(old_id, method)
-    body = yield old_id
+    # Alias the old method before it is replaced.
+    alias_method(old_sym, method)
+    # The body defines the new method given the old method.
+    body = yield old_sym
     define_method(method, body)
-    old_id
+    old_sym
   end
 end

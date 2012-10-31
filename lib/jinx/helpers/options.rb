@@ -3,7 +3,8 @@ require 'jinx/helpers/collections'
 require 'jinx/helpers/validation'
 require 'jinx/helpers/merge'
 
-# Options is a utility class to support method options.
+# Options is a utility class to support a method option parameter.
+# Option argument parsing is described in {Options.get}.
 class Options
   # Returns the value of option in options as follows:
   # * If options is a hash which contains the option key, then this method returns
@@ -80,8 +81,8 @@ class Options
 
   private
   
-  def self.detect_in_enumerable(key, options)
-    options.detect_value do |opt|
+  def self.detect_in_enumerable(key, opts)
+    opts.detect_value do |opt|
       Hash === opt ? opt[key] : opt == key
     end
   end

@@ -4,7 +4,7 @@ module Jinx
   # @example
   #   ConditionalEnumerator.new([1, 2, 3]) { |i| i < 3 }.to_a #=> [1, 2]
   class ConditionalEnumerator
-    include Collection
+    include Enumerable, Collection
 
     # Creates a ConditionalEnumerator which wraps the base Enumerator with a conditional filter.
     def initialize(base, &filter)

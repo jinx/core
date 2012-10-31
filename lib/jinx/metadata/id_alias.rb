@@ -11,6 +11,7 @@ module Jinx
     def identifier
       getId
     end
+    
 
     # Sets the identifier to the given value.
     # This method delegates to the Java +id+ attribute writer method.

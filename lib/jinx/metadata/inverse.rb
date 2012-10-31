@@ -23,10 +23,13 @@ module Jinx
     # A domain attribute is recognized as an inverse according to the
     # {Inverse#detect_inverse_attribute} criterion.
     #
-    # @param [Attribute] property the property to check
+    # @param [Property] property the property to check
+    # @return [Symbol, nil] the inverse attribute, or nil if none was
+    #   detected
     def infer_property_inverse(property)
       inv = property.type.detect_inverse_attribute(self)
-      if inv then set_attribute_inverse(property.attribute, inv) end
+      set_attribute_inverse(property.attribute, inv) if inv
+      inv
     end
     
     # Sets the given bi-directional association attribute's inverse.
@@ -63,7 +66,7 @@ module Jinx
       # If attribute is the one side of a 1:M or non-reflexive 1:1 relation, then add the inverse updater.
       unless prop.collection? then
         # Inject adding to the inverse collection into the attribute writer method. 
-        add_inverse_updater(pa, inverse)
+        add_inverse_updater(pa)
         unless prop.type == inv_prop.type or inv_prop.collection? then
           prop.type.delegate_writer_to_inverse(inverse, pa)
         end
@@ -151,26 +154,26 @@ module Jinx
     # @return (see #detect_inverse_attribute)
     def detect_inverse_attribute_from_candidates(klass, candidates)
       return if candidates.empty?
-      # there can be at most one owner attribute per owner.
+      # There can be at most one owner attribute per owner.
       return candidates.first.to_sym if candidates.size == 1
-      # by convention, if more than one attribute references the owner type,
-      # then the attribute named after the owner type is the owner attribute
-      tgt = klass.name[/\w+$/].underscore.to_sym
+      # By convention, if more than one attribute references the owner type,
+      # then the attribute named after the owner type is the owner attribute.
+      tgt = klass.name.demodulize.underscore.to_sym
       tgt if candidates.detect { |pa| pa == tgt }
     end
     
     # Modifies the given attribute writer method to update the given inverse.
     #
     # @param (see #set_attribute_inverse)
-    def add_inverse_updater(attribute, inverse)
+    def add_inverse_updater(attribute)
       prop = property(attribute)
       # the reader and writer methods
       rdr, wtr = prop.accessors
-      # the inverse atttribute metadata
+      # the inverse attribute metadata
       inv_prop = prop.inverse_property
       # the inverse attribute reader and writer
       inv_rdr, inv_wtr = inv_accessors = inv_prop.accessors
-      # Redefine the writer method to update the inverse by delegating to the inverse
+      # Redefine the writer method to update the inverse by delegating to the inverse.
       redefine_method(wtr) do |old_wtr|
         # the attribute reader and (superseded) writer
         accessors = [rdr, old_wtr]
@@ -180,7 +183,7 @@ module Jinx
           lambda { |other| set_inversible_noncollection_attribute(other, accessors, inv_wtr) }
         end
       end
-      logger.debug { "Injected inverse #{inverse} updater into #{qp}.#{attribute} writer method #{wtr}." }
+      logger.debug { "Injected inverse #{inv_prop} updater into #{qp}.#{attribute} writer method #{wtr}." }
     end
   end
 end

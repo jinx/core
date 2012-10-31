@@ -2,14 +2,13 @@ require 'enumerator'
 require 'generator'
 require 'jinx/helpers/options'
 require 'jinx/helpers/collections'
-
 require 'jinx/helpers/validation'
 require 'jinx/helpers/visitor'
 
 module Jinx
   # A ReferenceEnumerator iterates over domain property references.
   class ReferenceEnumerator
-    include Enumerable
+    include Enumerable, Collection
     
     # @return [Resource] the domain object containing the references
     attr_reader :subject

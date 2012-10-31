@@ -1,8 +1,14 @@
 module Jinx
   # This Filter helper class applies a selection block to a base enumeration.
   class Filter
-    include Collection
+    include Enumerable, Collection
 
+    # Initializes this Filter's from the given base enumeration and optional filter test.
+    # The default filter test is whether the item is non-nil and not +false+.
+    #
+    # @param [Enumerable] enum the base enumeration to filter
+    # @yield [item] the block called on each item
+    # @yieldparam item the enumerated item
     def initialize(enum=[], &filter)
       @base = enum
       @filter = filter
@@ -10,7 +16,7 @@ module Jinx
 
     # Calls the given block on each item which passes this Filter's filter test.
     #
-    # @yield [item] the block called on each item
+    # @yield [item] the block called on each filtered item
     # @yieldparam item the enumerated item
     def each
       @base.each { |item| yield(item) if @filter ? @filter.call(item) : item }

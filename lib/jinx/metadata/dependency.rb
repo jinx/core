@@ -3,35 +3,44 @@ require 'jinx/helpers/validation'
 module Jinx
   # Metadata mix-in to capture Resource dependency.
   module Dependency
-    # @return [<Class>] the owner classes
-    attr_reader :owners
-    
     # @return [<Symbol>] the owner reference attributes
     attr_reader :owner_attributes
 
-    # Adds the given attribute as a dependent.
+    # Adds the given property as a dependent.
     #
-    # If the attribute inverse is not a collection, then the attribute writer
+    # If the property inverse is not a collection, then the property writer
     # is modified to delegate to the dependent owner writer. This enforces
     # referential integrity by ensuring that the following post-condition holds:
     # *  _owner_._attribute_._inverse_ == _owner_
     # where:
-    # * _owner_ is an instance this attribute's declaring class
+    # * _owner_ is an instance this property's declaring class
     # * _inverse_ is the owner inverse attribute defined in the dependent class
     #
-    # @param [Symbol] attribute the dependent to add
+    # @param [Property] property the dependent to add
     # @param [<Symbol>] flags the attribute qualifier flags
-    def add_dependent_attribute(attribute, *flags)
-      prop = property(attribute)
-      logger.debug { "Marking #{qp}.#{attribute} as a dependent attribute of type #{prop.type.qp}..." }
+    def add_dependent_property(property, *flags)
+      logger.debug { "Marking #{qp}.#{property} as a dependent attribute of type #{property.type.qp}..." }
       flags << :dependent unless flags.include?(:dependent)
-      prop.qualify(*flags)
-      inverse = prop.inverse
-      inv_type = prop.type
-      # example: Parent.add_dependent_attribute(:children) with inverse :parent calls the following:
+      property.qualify(*flags)
+      inv = property.inverse
+      inv_type = property.type
+      # example: Parent.add_dependent_property(child_prop) with inverse :parent calls the following:
       #   Child.add_owner(Parent, :children, :parent)
-      inv_type.add_owner(self, attribute, inverse)
-      logger.debug { "Marked #{qp}.#{attribute} as a dependent attribute with inverse #{inv_type.qp}#{inverse}." }
+      inv_type.add_owner(self, property.attribute, inv)
+      if inv then
+        logger.debug "Marked #{qp}.#{property} as a dependent attribute with inverse #{inv_type.qp}.#{inv}."
+      else  
+        logger.debug "Marked #{qp}.#{property} as a uni-directional dependent attribute."
+      end
+    end
+
+    # Adds the given attribute as a dependent.
+    #
+    # @see #add_dependent_property
+    # @param [Symbol] attribute the dependent to add
+    # @param (see #add_dependent_property)
+    def add_dependent_attribute(attribute, *flags)
+      add_dependent_property(property(attribute), *flags)
     end
     
     # @return [Boolean] whether this class depends on an owner
@@ -66,19 +75,40 @@ module Jinx
     end
     
     # @return [Boolean] whether this {Resource} class is dependent and reference its owners
-    def bidirectional_dependent?
-      dependent? and not owner_attributes.empty?
+    def bidirectional_java_dependent?
+      dependent? and owner_properties.any? { |prop| prop.java_property? }
     end
 
     # @return [<Class>] this class's dependent types
-    def dependents
-      dependent_attributes.wrap { |da| da.type }
+    def dependent_types
+      dependent_properties.wrap { |dp| dp.type }
     end
+    
+    # @return [<Property>, nil] the path of this class to the given class through dependent
+    #   properties, or nil if there is no such path exists
+    def dependency_path_to(klass)
+      return if klass.owner_types.empty? 
+      op = klass.owner_properties.detect { |prop| self <= prop.type }
+      dp = op.inverse if op
+      dp ||= if klass.owner_properties.size < klass.owner_types.size then
+        dependent_properties.detect { |prop| klass <= prop.type }
+      end
+      return [dp] if dp
+      dependent_properties.detect_value do |dp|
+        next if self <= dp.type
+        path = dp.type.dependency_path_to(klass)
+        path.unshift(dp) if path
+      end
+    end
+    
+    alias :dependents :dependent_types
 
     # @return [<Class>] this class's owner types
-    def owners
+    def owner_types
       @owners ||= Enumerable::Enumerator.new(owner_property_hash, :each_key)
     end
+    
+    alias :owners :owner_types
 
     # @return [Property, nil] the sole owner attribute metadata of this class, or nil if there
     #   is not exactly one owner
@@ -122,29 +152,34 @@ module Jinx
         raise MetadataError.new("Can't add #{qp} owner #{klass.qp} after dependencies have been accessed")
       end
       
-      # detect the owner attribute, if necessary
+      # Detect the owner attribute, if necessary.
       attribute ||= detect_owner_attribute(klass, inverse)
-      prop = property(attribute) if attribute
+      hash = local_owner_property_hash
+      # Guard against a conflicting owner reference attribute.
+      if hash[klass] then
+        raise MetadataError.new("Cannot set #{qp} owner attribute to #{attribute or 'nil'} since it is already set to #{hash[klass]}")
+      end
       # Add the owner class => attribute entry.
       # The attribute is nil if the dependency is unidirectional, i.e. there is an owner class which
       # references this class via a dependency attribute but there is no inverse owner attribute.
-      local_owner_property_hash[klass] = prop
+      prop = property(attribute) if attribute
+      hash[klass] = prop
       # If the dependency is unidirectional, then our job is done.
       if attribute.nil? then
-        logger.debug { "#{qp} owner #{klass.qp} has unidirectional inverse #{inverse}." }
+        logger.debug { "#{qp} owner #{klass.qp} has unidirectional dependent attribute #{inverse}." }
         return
       end
 
-      # Bi-directional: add the owner property
+      # Bi-directional: add the owner property.
       local_owner_properties << prop
-      # set the inverse if necessary
+      # Set the inverse if necessary.
       unless prop.inverse then
         set_attribute_inverse(attribute, inverse)
       end
-      # set the owner flag if necessary
-      unless prop.owner? then prop.qualify(:owner) end
+      # Set the owner flag if necessary.
+      prop.qualify(:owner) unless prop.owner?
 
-      # Redefine the writer method to warn when changing the owner.
+      # Redefine the writer method to issue a warning if the owner is changed.
       rdr, wtr = prop.accessors
       redefine_method(wtr) do |old_wtr|
         lambda do |ref|

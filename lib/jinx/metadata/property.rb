@@ -272,8 +272,8 @@ module Jinx
       end
       @flags << flag
       case flag
-        when :owner then owner_flag_set
-        when :dependent then dependent_flag_set
+      when :owner then owner_flag_set
+      when :dependent then dependent_flag_set
       end
     end
     
@@ -286,12 +286,17 @@ module Jinx
       if dependent? then
         raise MetadataError.new("#{declarer.qp}.#{self} cannot be set as a #{type.qp} owner since it is already defined as a #{type.qp} dependent")
       end
-      inv_attr = type.dependent_attribute(@declarer)
-      if inv_attr.nil? then
-        raise MetadataError.new("#{@declarer.qp} owner attribute #{self} does not have a #{type.qp} dependent inverse")
+      inv_prop = inverse_property
+      if inv_prop then
+        inv_prop.qualify(:dependent) unless inv_prop.dependent?
+      else
+        inv_attr = type.dependent_attribute(@declarer)
+        if inv_attr.nil? then
+          raise MetadataError.new("The #{@declarer.qp} owner attribute #{self} of type #{type.qp} does not have an inverse")
+        end
+        logger.debug { "#{declarer.qp}.#{self} inverse is the #{type.qp} dependent attribute #{inv_attr}." }
+        self.inverse = inv_attr
       end
-      logger.debug { "#{declarer.qp}.#{self} inverse is the #{type.qp} dependent attribute #{inv_attr}." }
-      self.inverse = inv_attr
     end
     
     # Validates that this is not an owner attribute.
@@ -299,7 +304,7 @@ module Jinx
     # @raise [MetadataError] if this is an owner attribute
     def dependent_flag_set
       if owner? then
-        raise MetadataError.new("#{declarer.qp}.#{self} cannot be set as a  #{type.qp} dependent since it is already defined as a #{type.qp} owner")
+        raise MetadataError.new("#{declarer.qp}.#{self} cannot be set as a #{type.qp} dependent since it is already defined as a #{type.qp} owner")
       end
     end
   end

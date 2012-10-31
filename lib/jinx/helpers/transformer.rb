@@ -1,7 +1,9 @@
+require 'jinx/helpers/collection'
+
 module Jinx
   # This Transformer helper class applies a transformer block to a base enumeration.
   class Transformer
-    include Collection
+    include Enumerable, Collection
 
     def initialize(enum=[], &transformer)
       @base = enum

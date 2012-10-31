@@ -5,6 +5,9 @@ module Jinx
   # The attribute metadata for an introspected Java property. 
   class JavaProperty < Property
 
+    # This property's Java property descriptor type JRuby class wrapper.
+    attr_reader :java_wrapper_class
+
     # This property's Java property descriptor.
     attr_reader :property_descriptor
 
@@ -35,21 +38,22 @@ module Jinx
       # deficient Java introspector does not recognize 'is' prefix for a Boolean property
       rm = declarer.property_read_method(pd)
       raise ArgumentError.new("Property does not have a read method: #{declarer.qp}.#{pd.name}") unless rm
-      reader = rm.name.to_sym
-      unless declarer.method_defined?(reader) then
-        reader = "is#{reader.to_s.capitalize_first}".to_sym
-        unless declarer.method_defined?(reader) then
+      rdr = rm.name.to_sym
+      unless declarer.method_defined?(rdr) then
+        rdr = "is#{rdr.to_s.capitalize_first}".to_sym
+        unless declarer.method_defined?(rdr) then
           raise ArgumentError.new("Reader method not found for #{declarer} property #{pd.name}")
         end
       end
       unless pd.write_method then
         raise ArgumentError.new("Property does not have a write method: #{declarer.qp}.#{pd.name}")
       end
-      writer = pd.write_method.name.to_sym
-      unless declarer.method_defined?(writer) then
+      wtr = pd.write_method.name.to_sym
+      unless declarer.method_defined?(wtr) then
         raise ArgumentError.new("Writer method not found for #{declarer} property #{pd.name}")
       end
-      @java_accessors = [reader, writer]
+      @java_accessors = [rdr, wtr]
+      @java_wrapper_class = Class.to_ruby(pd.property_type)
       qualify(:collection) if collection_java_class?
       @type = infer_type
     end
@@ -97,15 +101,13 @@ module Jinx
 
     # @return [Boolean] whether this property's Java type is +Iterable+
     def collection_java_class?
-      # the Java property type
-      ptype = @property_descriptor.property_type
-      # Test whether the corresponding JRuby wrapper class or module is an Iterable.
-      Class.to_ruby(ptype) < Java::JavaLang::Iterable
+      # Test whether the JRuby wrapper class or module is an Iterable.
+      @java_wrapper_class < Java::JavaLang::Iterable
     end
 
     # @return [Class] the type for the specified klass property descriptor pd as described in {#initialize}
     def infer_type
-      collection? ? infer_collection_type : infer_non_collection_type
+      collection? ? infer_collection_type : @java_wrapper_class
     end
 
     # Returns the domain type for this property's Java Collection property descriptor.
@@ -117,12 +119,6 @@ module Jinx
        generic_parameter_type or infer_collection_type_from_name or Java::JavaLang::Object
     end
 
-    # @return [Class] this property's Ruby type
-    def infer_non_collection_type
-      jtype = @property_descriptor.property_type
-      Class.to_ruby(jtype)
-    end
-
     # @return [Class, nil] the domain type of this property's property descriptor Collection generic
     #   type argument, or nil if none
     def generic_parameter_type
@@ -132,16 +128,9 @@ module Jinx
       atypes = gtype.actualTypeArguments
       return unless atypes.size == 1
       atype = atypes[0]
-      klass = java_to_ruby_class(atype)
+      klass = Class.to_ruby(atype)
       logger.debug { "Inferred #{declarer.qp} #{self} domain type #{klass.qp} from generic parameter #{atype.name}." } if klass
       klass
-    end
-
-    # @param [Class, String] jtype the Java class or class name
-    # @return [Class] the corresponding Ruby type 
-    def java_to_ruby_class(jtype)
-      name = String === jtype ? jtype : jtype.name
-      Class.to_ruby(name)
     end
 
     # Returns the domain type for this property's collection Java property descriptor name.

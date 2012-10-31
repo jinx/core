@@ -25,6 +25,20 @@ module Jinx
       # introspected when they are referenced.
     end
     
+    # Returns whether the given Java class or interface is imported into this
+    # domain module. This method imports the class or interface on demand.
+    #
+    # @param [Module] the class to check
+    # @return [Boolean] whether the class or interface is imported into this
+    #   domain module
+    def contains?(klass)
+      # Import a domain class on demand by referencing the class base name in the context
+      # of this module. If the class name can be resolved, then also check that it
+      # was introspected. Primitive classes like String can be resolved, but are not
+      # introspected. Domain classes are introspected when the name is resolved.
+      (!!const_get(klass.name.demodulize) rescue false) and @introspected.include?(klass)
+    end
+    
     # Imports a Java class constant on demand. If the class does not already
     # include this module's mixin, then the mixin is included in the class.
     #
@@ -51,14 +65,16 @@ module Jinx
           nil
         end
       end
-      if klass.nil? then
+      if klass then
+        logger.debug { "Added #{klass} to the #{self} module." }
+      else
         # Not a Java class; print a log message and pass along the error.
         logger.debug { "#{sym} is not recognized as a #{self} Java class." }
         super
       end
       
       # Introspect the Java class meta-data, if necessary.
-      unless @introspected.include?(klass) then
+      unless introspected?(klass) then
         add_metadata(klass)
         # Print the class meta-data.
         logger.info(klass.pp_s)
@@ -103,23 +119,30 @@ module Jinx
       end
       # The introspected classes.
       @introspected = Set.new
+      # The name => file hash for file definitions that are not in the packages.
+      @unresolved_defs = {}
     end
     
-    # Sets the package names. The default package conforms to the JRuby convention for
-    # mapping a package name to a module name, e.g. the +MyApp::Domain+ default package
+    # If the given *names* argument is empty, then returns the package names.
+    # Otherwise, sets the package names. The default package conforms to the JRuby convention
+    # for mapping a package name to a module name, e.g. the +MyApp::Domain+ default package
     # is +myapp.domain+. Clients set the package if it differs from the default.
     #
     # @param [<String>] name the package names
     def packages(*names)
-      @packages = names
+      names.empty? ? @packages : @packages = names
     end
     
     # Alias for the common case of a single package.
     alias :package :packages
-    
+
+    # If the given *directories* argument is empty, then return the definition directories.
+    # Otherwise, set the definitions.
+    #
     # @param [<String>] directories the Ruby class definitions directories
+    # @return [<String>] the definition directories
     def definitions(*directories)
-      @definitions = directories
+      directories.empty? ? @definitions : @definitions = directories
     end
     
     def load_definitions
@@ -140,16 +163,25 @@ module Jinx
       srcs = sources(dir)
       # Introspect and load the classes in reverse class order, i.e. superclass before subclass.
       klasses = srcs.keys.transitive_closure { |k| [k.superclass] }.select { |k| srcs[k] }.reverse
-      # Introspect the classes if necessary.
-      klasses.each { |klass| add_metadata(klass) unless @introspected.include?(klass) }
+      # Introspect the classes as necessary.
+      klasses.each { |klass| add_metadata(klass) unless introspected?(klass) }
       # Load the classes.
       klasses.each do |klass|
         file = srcs[klass]
-        logger.debug { "Loading #{klass.qp} definition #{file}..." }
-        require file
-        logger.debug { "Loaded #{klass.qp} definition #{file}." }
+        load_definition(klass, file)
       end
       logger.debug { "Loaded the class definitions in #{dir}." }
+    end
+    
+    def load_definition(klass, file)
+      logger.debug { "Loading the #{klass.qp} definition #{file}..." }
+      begin
+        require file
+      rescue Exception
+        logger.error("Could not load the #{klass} definition #{file} - " + $!)
+        raise
+      end
+      logger.debug { "Loaded the #{klass.qp} definition #{file}." }
     end
 
     # @param [String] dir the source directory
@@ -161,7 +193,12 @@ module Jinx
       # Ignore files which do not resolve to a class.
       files.to_compact_hash do |file|
         name = File.basename(file, ".rb").camelize
-        resolve_class(name)
+        klass = resolve_class(name)
+        if klass.nil? then
+          logger.debug { "The class definition file #{file} does not correspond to a class in the standard #{qp} packages." }
+          @unresolved_defs[name] = file
+        end
+        klass
       end.invert
     end
     
@@ -196,46 +233,62 @@ module Jinx
       # into this method when the references are introspected below.
       @introspected << klass
       # Add the superclass meta-data if necessary.
-      if Class === klass then
-        sc = klass.superclass
-        unless @introspected.include?(sc) or sc == Java::java.lang.Object then
-          add_metadata(sc)
-        end
-      end
-      # Include this resource module into the class.
+      add_superclass_metadata(klass)
+      # Include this resource module into the class, unless this has already occurred.
       unless klass < self then
         m = self
         klass.class_eval { include m }
       end
+      # Import the class into this resource module, unless this has already occurred.
+      name = klass.name.demodulize
+      unless const_defined?(name) then
+        java_import(klass.java_class.name)
+      end
       # Add introspection capability to the class.
       md_mod = @metadata_module || Metadata
-      
       logger.debug { "Extending #{self}::#{klass.qp} with #{md_mod.name}..." }
       klass.extend(md_mod)
-      
-      # Introspect the Java properties.
-      introspect(klass)
-      klass.add_attribute_value_initializer if Class === klass
       # Set the class domain module.
       klass.domain_module = self
+      # Introspect the Java properties.
+      klass.introspect
+      # Add the {attribute => value} initializer.
+      klass.add_attribute_value_initializer if Class === klass
       # Add referenced domain class metadata as necessary.
-      mod = klass.parent_module
       klass.each_property do |prop|
         ref = prop.type
         if ref.nil? then raise MetadataError.new("#{self} #{prop} domain type is unknown.") end
-        unless @introspected.include?(ref) or ref.parent_module != mod then
-          logger.debug { "Introspecting #{qp} #{prop} reference #{ref.qp}..." }
+        if introspectible?(ref) then
+          logger.debug { "Introspecting the #{klass.qp} #{prop} reference type #{ref.qp}..." }
           add_metadata(ref)
         end
       end
+      # If the class has a definition file but does not resolve to a standard package, then
+      # load it now based on the demodulized class name match.
+      file = @unresolved_defs[name]
+      load_definition(klass, file) if file
+      
       logger.debug("#{self}::#{klass.qp} metadata added.")
     end
     
-    # Introspects the given class.
-    #
-    # @param [Class] the domain class to introspect
-    def introspect(klass)
-      klass.introspect
+    def add_superclass_metadata(klass)
+      if Class === klass then
+        sc = klass.superclass
+        add_metadata(sc) unless introspected?(sc) or sc == Java::java.lang.Object
+      end
+    end
+    
+    # @param [Class] the class to check
+    # @return [Boolean] whether the class is an introspected {Resource} class
+    def introspected?(klass)
+       klass < Resource and klass.introspected?
+    end
+                               
+    # @param [Class] klass the class to check                          
+    # @return [Boolean] whether the given class has a Java package among this module's
+    #  {#packages} and has not yet been introspected
+    def introspectible?(klass)
+      not introspected?(klass) and Class === klass and @packages.include?(klass.java_class.package.name)
     end
   end
 end

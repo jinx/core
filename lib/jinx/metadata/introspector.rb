@@ -8,18 +8,32 @@ module Jinx
   # Meta-data mix-in to infer attribute meta-data from Java properties.
   module Introspector
     include Propertied
-    
-    # @return [Boolean] whether this class has been introspected
-    def introspected?
-      !!@introspected
+      
+    # Introspects the given class, if necessary. Some member of the class hierarchy
+    # must first be introspected.
+    #
+    # @param [Class] klass the class to introspect if necessary 
+    # @raise [NoSuchMethodError] if the class or an ancestor of the class is not
+    #   introspected 
+    def self.ensure_introspected(klass)
+      return if klass < Resource and klass.introspected?
+      sc = klass.superclass
+      ensure_introspected(sc) unless sc == Java::java.lang.Object
+      logger.debug { "Introspecting the fetched object class #{klass}..." }
+      # Resolving the class name in the context of the domain module
+      # introspects the class.
+      sc.domain_module.const_get(klass.name.demodulize)
     end
     
-    # Adds an optional {attribute=>value} constructor parameter to this class.
+    # Augments the introspected class +new+ method as follows:
+    # * Adds an optional {attribute=>value} constructor parameter.
+    # * Calls the {Resource#post_initialize} method after initialization.
     def add_attribute_value_initializer
       class << self
-        def new(params=nil)
+        def new(opts=nil)
           obj = super()
-          obj.merge_attributes(params) if params
+          obj.post_initialize
+          obj.merge_attributes(opts) if opts
           obj
         end
       end
@@ -52,8 +66,6 @@ module Jinx
         # Define the standard Java attribute methods.
         pds.each { |pd| define_java_property(pd) }
       end
-      # Mark this class as introspected.
-      @introspected = true
       logger.debug { "Introspection of #{qp} metadata complete." }
       self
     end

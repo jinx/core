@@ -154,8 +154,8 @@ module Enumerable
 end
 
 module Jinx
-  module Hashable
-    # qp, short for quick-print, prints this Hashable with a filter that calls qp on each key and value.
+  module Hasher
+    # qp, short for quick-print, prints this Hasher with a filter that calls qp on each key and value.
     #
     # @return [String] the quick-print result
     def qp
@@ -182,9 +182,19 @@ class String
 end
 
 class DateTime
-  # @return [String] the formatted +strftime+
+  # Pretty-prints the DateTime +strftime+ to the given queue in the format
+  # _date_+T+_hr_+h+_mm_+m+_ss_+s+, e.g. +2010-10-10T04h10m30+.
+  #
+  # @quirk JRuby pp standard libary bug - Printing the formatted date:time string sporadically
+  #   results in a corrupted line, e.g.:
+  #     at top level in 2010-10-10T00:00:00-07:00 at line 1 
+  #   The Jinx work-around is to substitute the colons with +h+, +m+ and +s+ and omit the GMT offset.
+  #   The bug cause is unknown. Perhaps it is a flaw in the line break logic.
+  #
+  # @param q the print queue
+  # @return [String] the formatted date and time
   def pretty_print(q)
-    q.text(strftime)
+    q.text(strftime.sub(/T(\d{2}):(\d{2}):(\d{2})-\d{2}:\d{2}/, 'T\1h\2m\3s'))
   end
   
   # qp, an abbreviation for quick-print, is an alias for {#to_s} in this primitive class.

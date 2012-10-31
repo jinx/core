@@ -34,8 +34,10 @@ module Jinx
         clr_wtr = self.class === oldval && oldval.send(rdr).equal?(self) ? wtr : inverse_writer
         oldval.send(clr_wtr, nil)
       end
+      
       # call the writer
       send(wtr, newval)
+      
       # call the inverse writer on self
       if newval then
         newval.send(inverse_writer, self)
@@ -67,8 +69,10 @@ module Jinx
         coll = oldval.send(inverse)
         coll.delete(self) if coll
       end
+      
       # call the writer on this object
       send(wtr, newval)
+      
       # add self to the inverse collection
       if newval then
         coll = newval.send(inverse)

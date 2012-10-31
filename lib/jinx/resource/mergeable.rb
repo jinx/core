@@ -39,10 +39,9 @@ module Jinx
       return self if other.nil? or other.equal?(self)
       attributes = [attributes] if Symbol === attributes
       attributes ||= self.class.mergeable_attributes
-
-      # if the source object is not a hash, then convert it to an attribute => value hash
-      vh = Hashable === other ? other : other.value_hash(attributes)
-      # merge the value hash
+      # If the source object is not a hash, then convert it to an attribute => value hash.
+      vh = Hasher === other ? other : other.value_hash(attributes)
+      # Merge the Java values hash.
       vh.each { |pa, value| merge_attribute(pa, value, matches, &filter) }
       self
     end
@@ -100,6 +99,17 @@ module Jinx
       end
     end
 
+    # Returns an attribute => value hash for the specified attributes with a non-nil, non-empty value.
+    # The default attributes are this domain object's class {Propertied#attributes}.
+    # Only non-nil values of attributes defined by this domain object are included in the result hash.
+    #
+    # @param [<Symbol>, nil] attributes the attributes to merge
+    # @return [{Symbol => Object}] the attribute => value hash
+    def value_hash(attributes=nil)
+      attributes ||= self.class.attributes
+      attributes.to_compact_hash { |pa| send(pa) rescue nil }
+    end
+
     private
 
     # @see #merge_attribute
@@ -118,7 +128,7 @@ module Jinx
       # the dependent owner writer method, if any
       if property.dependent? then
         val = property.collection? ? newval.first : newval
-        klass = val.class if val
+        klass = val.domain_class if val
         inv_prop = self.class.inverse_property(property, klass)
         if inv_prop and not inv_prop.collection? then
           owtr = inv_prop.writer
@@ -178,8 +188,8 @@ module Jinx
         # If the target is a dependent, then set the dependent owner, which will in turn
         # set the attribute to the dependent. Otherwise, set the attribute to the target.
         owtr ? delegate_to_inverse_setter(property, ref, owtr) : set_typed_property_value(property, ref)
+        ref
       end
-      newval
     end
 
     # @quirk Java Java TreeSet comparison uses the TreeSet comparator rather than an

@@ -29,12 +29,15 @@ module Jinx
   #   module Domain
   #     include Jinx::Resource  
   #     # The caTissue Java package name.
-  #     packages 'app.domain'
+  #     package 'app.domain'
   #     # The JRuby mix-ins directory.
   #     definitions File.expand_path('domain', dirname(__FILE__))
   #   end
   module Resource
     include Mergeable, Inversible
+    
+    # A proxied subclass can override the +domain_class+.
+    alias :domain_class :class
     
     # @quirk JRuby Bug #5090 - JRuby 1.5 object_id is no longer a reserved method, and results
     #   in a String value rather than an Integer (cf. http://jira.codehaus.org/browse/JRUBY-5090).
@@ -44,6 +47,13 @@ module Jinx
     def proxy_object_id
       # make a hash code on demand
       @_hc ||= (Object.new.object_id * 31) + 17
+    end
+     
+    # Initialization hook. This default implementation is a no-op.
+    #
+    # @quirk JRuby calling super in a module initialize method results in an infinite loop.
+    #   The work-around is to add a post_initialize method that mix-in modules can override.
+    def post_initialize
     end
     
     # Prints this object's class demodulized name and object id.
@@ -134,12 +144,13 @@ module Jinx
     # is preserved, e.g. an Array value is assigned to a set domain type by first clearing the set
     # and then merging the array content into the set.
     #
-    # @see Mergeable#merge_attribute
-    def set_property_value(attribute, value)
-      prop = self.class.property(attribute)
+    # @param [Property, Symbol] prop the property or attribute to set
+    # @param value the new value
+    def set_property_value(prop, value)
+      prop = self.class.property(prop) if Symbol === prop
       if prop.domain? and prop.collection? then
-        clear_attribute(attribute)
-        merge_attribute(attribute, value)
+        clear_attribute(prop.attribute)
+        merge_attribute(prop.attribute, value)
       else
         set_typed_property_value(prop, value)
       end
@@ -196,8 +207,10 @@ module Jinx
       self.class.owner_attributes.detect_value { |pa| send(pa) }
     end
 
-    # @return [(Property, Resource), nil] the (property, value) pair for which there is an
-    # owner reference, or nil if this domain object does not reference an owner
+    # Returns the (property, value) pair for which there is an owner reference, or nil if
+    # this domain object does not reference an owner.
+    #
+    # @return [(Property, Resource), nil] the owner (property, value) pair
     def effective_owner_property_value
       self.class.owner_properties.detect_value do |op|
         ref = send(op.attribute)
@@ -207,12 +220,17 @@ module Jinx
     
     # Sets this dependent's owner attribute to the given domain object.
     #
-    # @param [Resource] owner the owner domain object
-    # @raise [NoMethodError] if this Resource's class does not have exactly one owner attribute
-    def owner=(owner)
-      pa = self.class.owner_attribute
-      if pa.nil? then raise NoMethodError.new("#{self.class.qp} does not have a unique owner attribute") end
-      set_property_value(pa, owner)
+    # @param [Resource] obj the owner domain object
+    # @raise [NoMethodError] if this Resource's class does not have an owner property
+    #   which accepts the given domain object
+    def owner=(obj)
+      if obj.nil? then
+        op, ov = effective_owner_property_value || return
+      else
+        op = self.class.owner_properties.detect { |prop| prop.type === obj }
+      end
+      if op.nil? then raise NoMethodError.new("#{self.class.qp} does not have an owner attribute for #{obj}") end
+      set_property_value(op.attribute, obj)
     end
 
     # @param [Resource] other the domain object to check
@@ -220,26 +238,36 @@ module Jinx
     #  {#owner_ancestor?} of this object's {#owner}
     def owner_ancestor?(other)
       ownr = self.owner
-      ownr and (ownr == other or ownr.owner_ancestor?(other))
+      if ownr then
+        ownr == other or ownr.owner_ancestor?(other)
+      elsif self.class.owner_types.size == self.class.owner_properties.size then
+        false
+      else
+        path = other.class.dependency_path_to(self.class)
+        !!path and other.reachable?(self, path)
+      end
     end
     
+    # @param [Resource] other the domain object to check
+    # @param [<Property>] the property path to follow
+    # @return [Boolean] whether following there is a path from this object through the given
+    #   properties to the other object
+    def reachable?(other, path)
+      return false if path.empty?
+      prop = path.shift
+      send(prop.attribute).to_enum.any? do |ref|
+        ref == other or ref.reachable?(other, path)
+      end
+    end
+        
     # @param [Resource] other the domain object to check
     # @return [Boolean] whether the other domain object is a dependent of this object
     #  and has an update-only non-domain attribute.
     def dependent_update_only?(other)
       other.owner == self and
-      other.class.nondomain_attributes.detect_with_property { |prop| prop.updatable? and not prop.creatable? }
-    end
-
-    # Returns an attribute => value hash for the specified attributes with a non-nil, non-empty value.
-    # The default attributes are this domain object's class {Propertied#attributes}.
-    # Only non-nil attributes defined by this Resource are included in the result hash.
-    #
-    # @param [<Symbol>, nil] attributes the attributes to merge
-    # @return [{Symbol => Object}] the attribute => value hash
-    def value_hash(attributes=nil)
-      attributes ||= self.class.attributes
-      attributes.to_compact_hash { |pa| send(pa) if self.class.method_defined?(pa) }
+      other.class.nondomain_attributes.detect_attribute_with_property do |prop|
+        prop.updatable? and not prop.creatable?
+      end
     end
 
     # Returns the domain object references for the given attributes.
@@ -398,13 +426,15 @@ module Jinx
     #
     # @param [Resource] other the domain object to compare
     # @param [<Symbol>, nil] attributes the attributes to compare
-    # @return (see Hashable#diff)
-    def diff(other, attributes=nil)
+    # @return (see Hasher#diff)
+    def difference(other, attributes=nil)
       attributes ||= self.class.nondomain_attributes
       vh = value_hash(attributes)
       ovh = other.value_hash(attributes)
       vh.diff(ovh) { |key, v1, v2| Resource.value_equal?(v1, v2) }
     end
+    
+    alias :diff :difference
 
     # Returns the domain object in others which matches this dependent domain object
     # within the scope of a parent on a minimally acceptable constraint. This method
@@ -696,7 +726,7 @@ module Jinx
         end
       end
       # If there is an owner reference attribute, then there must be an owner.
-      if self.class.bidirectional_dependent? then
+      if self.class.bidirectional_java_dependent? then
         raise ValidationError.new("Dependent #{self} does not reference an owner")
       end
     end
@@ -708,8 +738,8 @@ module Jinx
       begin
         send(property.writer, value)
       rescue TypeError
-        # Add the attribute to the error message.
-        raise TypeError.new("Cannot set #{self.class.qp} #{property} to #{value.qp} - " + $!)
+        logger.error("Cannot set #{self.class.qp} #{property} to #{value.qp} - " + $!)
+        raise
       end
     end
     
