@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub commits (https://github.com/jinx/core)
 for change details.
 
+2.1.4 / 2012-10-31
+------------------
+* Push Enumerable helper methods to Jinx::Collection.
+
 2.1.3 / 2012-08-18
 ------------------
 * Pull UID out of uniquifier.
