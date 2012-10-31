@@ -100,12 +100,15 @@ class CollectionsTest < Test::Unit::TestCase
 
   def test_union
     base = [1, 2]
-    sum = base.union([4])
-    assert_equal([1, 2, 4], sum.to_a, 'Enumerator union incorrect')
-    assert(sum.include?(2), "Enumerator union missing first array element")
-    assert(sum.include?(4), "Enumerator union missing second array element")
+    u = base.union([4])
+    assert_equal([1, 2, 4], u.to_a, 'Enumerator on union incorrect')
+    assert(u.include?(2), "Enumerator on union missing first array element")
+    assert(u.include?(4), "Enumerator on union missing second array element")
     base << 3
-    assert_equal([1, 2, 3, 4], sum.to_a, 'Enumerator union does not reflect operand modification')
+    assert_equal([1, 2, 3, 4], u.to_a, 'Enumerator on union does not reflect operand modification')
+    # A union of a unions yields the flattened result.
+    uu = u.union([5])
+    assert_equal([1, 2, 3, 4, 5], uu.to_a, 'Enumerator on union of unions incorrect')
   end
 
   def test_intersection

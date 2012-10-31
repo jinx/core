@@ -1,8 +1,10 @@
+require 'jinx/helpers/collection'
+
 module Jinx
   # A filter on the standard attribute symbol => metadata hash that yields
   # each attribute which satisfies the attribute metadata condition.
   class AttributeEnumerator
-    include Enumerable
+    include Enumerable, Collection
 
     # @param [{Symbol => Property}] hash the attribute symbol => metadata hash
     # @yield [prop] optional condition which determines whether the attribute is

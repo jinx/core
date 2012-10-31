@@ -1,7 +1,7 @@
 module Jinx
   # This Filter helper class applies a selection block to a base enumeration.
   class Filter
-    include Collection
+    include Enumerable, Collection
 
     # Initializes this Filter's from the given base enumeration and optional filter test.
     # The default filter test is whether the item is non-nil and not +false+.

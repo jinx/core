@@ -5,7 +5,7 @@ module Jinx
   # This Hasher module can be included by any class or module which implements an _each_
   # method with arguments _key_ and _value_.
   module Hasher
-    include Collection
+    include Enumerable, Collection
 
     # @see Hash#each_pair
     def each_pair(&block)

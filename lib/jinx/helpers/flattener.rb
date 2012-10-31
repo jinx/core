@@ -1,7 +1,7 @@
 module Jinx
   # A Flattener applies a given block to flattened collection content.
   class Flattener
-    include Collection
+    include Enumerable, Collection
 
     # Visits the enumerated items in the given object's flattened content.
     # The given block is called on the base itself if the base is neither nil nor a Enumerable.
